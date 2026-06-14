@@ -18,17 +18,21 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
 
   const addSlot = () => {
     if (!newSlot) return;
-    setSettings({ ...settings, slots: [...(settings.slots || []), { id: Date.now().toString(), timeRange: newSlot }] });
+    const updated = { ...settings, slots: [...(settings.slots || []), { id: Date.now().toString(), timeRange: newSlot }] };
+    setSettings(updated);
+    handleSave(updated);
     setNewSlot('');
   };
 
   const addDept = () => {
     if (!newDeptName || !newDeptIncluded) return;
     const depts = newDeptIncluded.split(',').map(s => s.trim()).filter(Boolean);
-    setSettings({
+    const updated = {
       ...settings,
       departmentGroups: [...(settings.departmentGroups || []), { id: Date.now().toString(), name: newDeptName, criticalLimit: parseInt(newDeptCrit) || 1, includedDepartments: depts }]
-    });
+    };
+    setSettings(updated);
+    handleSave(updated);
     setNewDeptName('');
     setNewDeptIncluded('');
   };
@@ -36,10 +40,12 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
   const addRule = () => {
     if (!newRuleSlot || !newRuleShifts) return;
     const shifts = newRuleShifts.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
-    setSettings({
+    const updated = {
       ...settings,
       rules: [...(settings.rules || []), { id: Date.now().toString(), slotId: newRuleSlot, targetShifts: shifts, dayType: newRuleDayType }]
-    });
+    };
+    setSettings(updated);
+    handleSave(updated);
     setNewRuleShifts('');
   };
 
@@ -56,7 +62,11 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
             {(settings.slots || []).map((s: any) => (
               <Badge key={s.id} variant="secondary" className="px-3 py-1 flex items-center gap-2 text-sm">
                 {s.timeRange}
-                <Trash2 className="w-3 h-3 cursor-pointer hover:text-red-500" onClick={() => setSettings({ ...settings, slots: settings.slots.filter((x: any) => x.id !== s.id) })} />
+                <Trash2 className="w-3 h-3 cursor-pointer hover:text-red-500" onClick={() => {
+                  const updated = { ...settings, slots: settings.slots.filter((x: any) => x.id !== s.id) };
+                  setSettings(updated);
+                  handleSave(updated);
+                }} />
               </Badge>
             ))}
           </div>
@@ -81,7 +91,11 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
                   <p className="font-semibold">{g.name} <span className="text-muted-foreground text-xs font-normal ml-2">(Minimum {g.criticalLimit} Kişi Kalmalı)</span></p>
                   <p className="text-xs text-muted-foreground">{g.includedDepartments.join(', ')}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setSettings({ ...settings, departmentGroups: settings.departmentGroups.filter((x: any) => x.id !== g.id) })}><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  const updated = { ...settings, departmentGroups: settings.departmentGroups.filter((x: any) => x.id !== g.id) };
+                  setSettings(updated);
+                  handleSave(updated);
+                }}><Trash2 className="w-4 h-4 text-red-500" /></Button>
               </div>
             ))}
           </div>
@@ -119,17 +133,17 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
                     <Badge variant="outline" className="mr-2">{r.dayType === 'weekday' ? 'Hafta İçi' : 'Hafta Sonu'}</Badge>
                     <span className="font-semibold">{slotStr}</span> ➔ Vardiya: {r.targetShifts.join(', ')}
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setSettings({ ...settings, rules: settings.rules.filter((x: any) => x.id !== r.id) })}><Trash2 className="w-4 h-4 text-red-500" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    const updated = { ...settings, rules: settings.rules.filter((x: any) => x.id !== r.id) };
+                    setSettings(updated);
+                    handleSave(updated);
+                  }}><Trash2 className="w-4 h-4 text-red-500" /></Button>
                 </div>
               );
             })}
           </div>
         </CardContent>
       </Card>
-
-      <Button onClick={handleSave} disabled={isSaving} className="w-full">
-        {isSaving ? 'Kaydediliyor...' : 'Tüm Ayarları Kaydet'}
-      </Button>
     </div>
   );
 };

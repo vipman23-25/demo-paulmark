@@ -73,7 +73,7 @@ export default function BreakPlanning() {
           <SettingsTab 
             settings={localSettings} 
             setSettings={setLocalSettings} 
-            handleSave={() => saveMutation.mutate(localSettings)} 
+            handleSave={(newSettings: any) => saveMutation.mutate(newSettings || localSettings)} 
             isSaving={saveMutation.isPending} 
           />
         </TabsContent>
