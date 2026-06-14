@@ -106,7 +106,8 @@ const SystemSettingsView = () => {
   const [geofenceActive, setGeofenceActive] = useState(false);
   const [geofenceLat, setGeofenceLat] = useState('41.0082');
   const [geofenceLng, setGeofenceLng] = useState('28.9784');
-  const [geofenceRadius, setGeofenceRadius] = useState('100');
+  const [geofenceRadiusStart, setGeofenceRadiusStart] = useState('100');
+  const [geofenceRadiusEnd, setGeofenceRadiusEnd] = useState('100');
 
   const { data: holidays = [], isLoading: isLoadingHolidays } = useQuery({
     queryKey: ['public_holidays'],
@@ -189,7 +190,8 @@ const SystemSettingsView = () => {
         setGeofenceActive(settings.geofence.isActive);
         setGeofenceLat(settings.geofence.lat.toString());
         setGeofenceLng(settings.geofence.lng.toString());
-        setGeofenceRadius(settings.geofence.radius.toString());
+        setGeofenceRadiusStart(settings.geofence.radiusStart?.toString() || settings.geofence.radius?.toString() || '100');
+        setGeofenceRadiusEnd(settings.geofence.radiusEnd?.toString() || settings.geofence.radius?.toString() || '100');
       }
     }
   }, [settings]);
@@ -686,7 +688,9 @@ const SystemSettingsView = () => {
                       isActive: checked, 
                       lat: parseFloat(geofenceLat), 
                       lng: parseFloat(geofenceLng), 
-                      radius: parseInt(geofenceRadius) || 100 
+                      radius: parseInt(geofenceRadiusStart) || 100,
+                      radiusStart: parseInt(geofenceRadiusStart) || 100,
+                      radiusEnd: parseInt(geofenceRadiusEnd) || 100
                     } 
                   }, {
                     onSuccess: () => toast.success('Coğrafi çit durumu güncellendi')
@@ -695,7 +699,7 @@ const SystemSettingsView = () => {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
               <div className="space-y-2">
                 <Label>Mağaza Enlemi (Latitude)</Label>
                 <Input type="number" step="any" value={geofenceLat} onChange={e => setGeofenceLat(e.target.value)} />
@@ -705,8 +709,12 @@ const SystemSettingsView = () => {
                 <Input type="number" step="any" value={geofenceLng} onChange={e => setGeofenceLng(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Yarıçap (Metre)</Label>
-                <Input type="number" value={geofenceRadius} onChange={e => setGeofenceRadius(e.target.value)} />
+                <Label>Molaya Çıkış Sınırı (Metre)</Label>
+                <Input type="number" value={geofenceRadiusStart} onChange={e => setGeofenceRadiusStart(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Moladan Dönüş Sınırı (Metre)</Label>
+                <Input type="number" value={geofenceRadiusEnd} onChange={e => setGeofenceRadiusEnd(e.target.value)} />
               </div>
             </div>
             <div className="flex gap-2 pt-2">
@@ -738,7 +746,9 @@ const SystemSettingsView = () => {
                       isActive: geofenceActive, 
                       lat: parseFloat(geofenceLat), 
                       lng: parseFloat(geofenceLng), 
-                      radius: parseInt(geofenceRadius) || 100 
+                      radius: parseInt(geofenceRadiusStart) || 100,
+                      radiusStart: parseInt(geofenceRadiusStart) || 100,
+                      radiusEnd: parseInt(geofenceRadiusEnd) || 100
                     } 
                   }, {
                     onSuccess: () => toast.success('Coğrafi çit ayarları kaydedildi')

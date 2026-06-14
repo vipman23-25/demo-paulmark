@@ -53,11 +53,19 @@ interface Personnel {
 const calculateWorkDuration = (startDate: string) => {
   const start = new Date(startDate);
   const now = new Date();
+  start.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  
   const diffMs = now.getTime() - start.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const months = Math.floor(diffDays / 30);
-  const days = diffDays % 30;
-  return { months, days };
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)); // Gün farkı
+  const totalDays = diffDays >= 0 ? diffDays + 1 : 0; // İşe başlanan gün de sayılır
+  
+  const years = Math.floor(totalDays / 365);
+  const remainingAfterYears = totalDays % 365;
+  const months = Math.floor(remainingAfterYears / 30);
+  const days = remainingAfterYears % 30;
+  
+  return { years, months, days, totalDays };
 };
 
 const PersonnelManagement = () => {
@@ -509,10 +517,10 @@ const PersonnelManagement = () => {
                           : '-'}
                       </div>
                       {p.start_date && !isNaN(new Date(p.start_date).getTime()) && (() => {
-                        const { months, days } = calculateWorkDuration(p.start_date);
+                        const { years, months, days, totalDays } = calculateWorkDuration(p.start_date);
                         return (
                           <div className="text-xs text-muted-foreground font-medium mt-1">
-                            {months} ay {days} gün
+                            {years > 0 && `${years} Yıl `}{months > 0 && `${months} Ay `}{days} Gün <span className="opacity-70">({totalDays} Gün)</span>
                           </div>
                         );
                       })()}

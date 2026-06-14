@@ -662,12 +662,18 @@ const EmployeePanel = () => {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [geofenceConfig.isActive, geofenceConfig.lat, geofenceConfig.lng, statusLabel]);
 
-  const isGeofenceBlocked = geofenceConfig.isActive && statusLabel === 'Mağazada' && (geoError !== null || (currentDistance !== null && currentDistance > geofenceConfig.radius));
+  const breakStartRadius = geofenceConfig.radiusStart || geofenceConfig.radius || 100;
+  const breakEndRadius = geofenceConfig.radiusEnd || geofenceConfig.radius || 100;
+  const activeRadius = statusLabel === 'Mağazada' ? breakStartRadius : breakEndRadius;
+
+  const isGeofenceBlockedForStart = geofenceConfig.isActive && statusLabel === 'Mağazada' && (geoError !== null || (currentDistance !== null && currentDistance > breakStartRadius));
+  const isGeofenceBlockedForEnd = geofenceConfig.isActive && statusLabel === 'Molada' && (geoError !== null || (currentDistance !== null && currentDistance > breakEndRadius));
+  const isGeofenceBlocked = isGeofenceBlockedForStart || isGeofenceBlockedForEnd;
 
   const startBreakMutation = useMutation({
     mutationFn: async () => {
-      if (isGeofenceBlocked) {
-        throw new Error("Mağaza sınırları dışındayken molaya çıkamazsınız!");
+      if (isGeofenceBlockedForStart) {
+        throw new Error(`Mağaza sınırları (${breakStartRadius}m) dışındayken molaya çıkamazsınız!`);
       }
       const { data, error } = await supabase.from('break_records').insert({ personnel_id: personnel!.id, break_start: new Date().toISOString() }).select('id, personnel_id, break_start, break_end').single();
       if (error) throw error;
@@ -690,8 +696,8 @@ const EmployeePanel = () => {
     mutationFn: async (breakId: string) => {
       if (geofenceConfig.isActive && statusLabel === 'Molada') {
         if (geoError) throw new Error("Konum bilgisi alınamadı. Lütfen konum servislerini açın.");
-        if (currentDistance !== null && currentDistance > geofenceConfig.radius) {
-          throw new Error(`Mağaza sınırları (${geofenceConfig.radius}m) dışındasınız! Lütfen mağazaya dönün.`);
+        if (currentDistance !== null && currentDistance > breakEndRadius) {
+          throw new Error(`Mağaza sınırları (${breakEndRadius}m) dışındasınız! (Mesafe: ${Math.round(currentDistance)}m)`);
         }
       }
       const { data, error } = await supabase.from('break_records').update({ break_end: new Date().toISOString() }).eq('id', breakId).select('id, personnel_id, break_start, break_end').single();
@@ -878,15 +884,13 @@ const EmployeePanel = () => {
         </div>
 
         {isGeofenceBlocked && (
-          <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-4 mb-4 rounded shadow-sm">
-            <div className="flex items-start">
-              <Smartphone className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
-              <div>
-                <h3 className="text-red-800 dark:text-red-300 font-semibold text-sm">Mağaza Sınırları Dışındasınız</h3>
-                <p className="text-red-700 dark:text-red-400 text-xs mt-1">
-                  {geoError ? geoError : `Mevcut konumunuz mağazadan uzak. İşlem yapabilmek için lütfen ${geofenceConfig.radius} metre alan içerisine giriniz.`}
-                </p>
-              </div>
+          <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg flex items-start gap-3 border border-red-100 dark:border-red-800/30">
+            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-red-800 dark:text-red-300 font-semibold text-sm">Mağaza Sınırları Dışındasınız</h3>
+              <p className="text-red-600 dark:text-red-400 text-xs mt-1">
+                {geoError ? geoError : `Mevcut konumunuz mağazadan uzak. İşlem yapabilmek için lütfen ${activeRadius} metre alan içerisine giriniz. (Mesafe: ${currentDistance ? Math.round(currentDistance) : '?'}m)`}
+              </p>
             </div>
           </div>
         )}
@@ -902,10 +906,10 @@ const EmployeePanel = () => {
               {activeBreak ? (
                 <>
                   <div className="p-4 bg-warning/10 rounded-lg text-center"><p className="text-lg font-semibold text-foreground">Moladasınız</p></div>
-                  <Button onClick={() => endBreakMutation.mutate(activeBreak.id)} disabled={endBreakMutation.isPending || startBreakMutation.isPending || loadingData} className="w-full" variant="default"><Coffee className="w-4 h-4 mr-2" /> Moladan Geldim</Button>
+                  <Button onClick={() => endBreakMutation.mutate(activeBreak.id)} disabled={isGeofenceBlockedForEnd || endBreakMutation.isPending || loadingData} className={`w-full ${isGeofenceBlockedForEnd ? 'opacity-50 cursor-not-allowed' : ''}`} variant="outline"><Coffee className="w-4 h-4 mr-2" /> Moladan Geldim</Button>
                 </>
               ) : (
-                <Button onClick={() => startBreakMutation.mutate()} disabled={isGeofenceBlocked || startBreakMutation.isPending || endBreakMutation.isPending || loadingData} className={`w-full ${isGeofenceBlocked ? 'opacity-50 cursor-not-allowed' : ''}`} variant="outline"><Coffee className="w-4 h-4 mr-2" /> Molaya Çıktım</Button>
+                <Button onClick={() => startBreakMutation.mutate()} disabled={isGeofenceBlockedForStart || startBreakMutation.isPending || loadingData} className={`w-full ${isGeofenceBlockedForStart ? 'opacity-50 cursor-not-allowed' : ''}`} variant="outline"><Coffee className="w-4 h-4 mr-2" /> Molaya Çıktım</Button>
               )}
 
               <DailyBreakTracker todayBreaks={todayBreaks} activeBreak={activeBreak} limitMinutes={breakLimit} />
