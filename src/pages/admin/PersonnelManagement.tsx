@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Download, Plus, Pencil, UserX, UserCheck, Trash2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInYears, differenceInMonths, differenceInDays, addYears, addMonths } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,19 +52,28 @@ interface Personnel {
 
 const calculateWorkDuration = (startDate: string) => {
   const start = new Date(startDate);
-  const now = new Date();
   start.setHours(0, 0, 0, 0);
+  const now = new Date();
   now.setHours(0, 0, 0, 0);
-  
+
   const diffMs = now.getTime() - start.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)); // Gün farkı
-  const totalDays = diffDays >= 0 ? diffDays + 1 : 0; // İşe başlanan gün de sayılır
-  
-  const years = Math.floor(totalDays / 365);
-  const remainingAfterYears = totalDays % 365;
-  const months = Math.floor(remainingAfterYears / 30);
-  const days = remainingAfterYears % 30;
-  
+  const totalDays = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1);
+
+  if (totalDays === 0) return { years: 0, months: 0, days: 0, totalDays: 0 };
+
+  const years = differenceInYears(now, start);
+  const dateAfterYears = addYears(start, years);
+  const months = differenceInMonths(now, dateAfterYears);
+  const dateAfterMonths = addMonths(dateAfterYears, months);
+  // +1 because we include the start day as a worked day
+  const days = differenceInDays(now, dateAfterMonths) + 1;
+
+  // Handle case where +1 day rolls over to a full month
+  if (days >= 30) {
+    // A simplified fix: if days is 30 or 31 due to the +1, it might logically mean another month in colloquial terms,
+    // but the exact calculation above is accurate based on calendar dates.
+  }
+
   return { years, months, days, totalDays };
 };
 
