@@ -36,12 +36,13 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
     queryKey: ['system_settings_movement_types'],
     queryFn: async () => {
       const { data } = await supabase.from('system_settings' as any).select('*').eq('setting_key', 'general').maybeSingle();
-      return data?.setting_value?.movementTypes || [
+      const types = data?.setting_value?.movementTypes || [
         { code: 'İ', label: 'İzin' },
         { code: 'R', label: 'Hastalık İzni' },
         { code: 'M', label: 'Muafiyet' },
         { code: 'B', label: 'Başka Görev' }
       ];
+      return types.filter((t: any) => t.is_active !== false);
     }
   });
 

@@ -66,7 +66,7 @@ const MovementManagement = () => {
     }
   });
 
-  const movementTypes = settingsData?.movementTypes || [{ code: 'İ', label: 'İzin' }, { code: 'R', label: 'Hastalık İzni' }, { code: 'M', label: 'Muafiyet' }, { code: 'B', label: 'Başka Görev' }];
+  const movementTypes = (settingsData?.movementTypes || [{ code: 'İ', label: 'İzin' }, { code: 'R', label: 'Hastalık İzni' }, { code: 'M', label: 'Muafiyet' }, { code: 'B', label: 'Başka Görev' }]).filter((t: any) => t.is_active !== false);
 
   const { data: movements = [], isLoading: mLoading, refetch } = useQuery({
     queryKey: ['personnel_movements'],

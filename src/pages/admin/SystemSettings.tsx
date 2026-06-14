@@ -304,9 +304,25 @@ const SystemSettingsView = () => {
   };
 
   const removeMovementType = (code: string) => {
+    if (!confirm('Bu hareket türünü silmek istediğinize emin misiniz?')) return;
     const updated = { ...settings, movementTypes: settings.movementTypes.filter((t: any) => t.code !== code) };
     updateMutation.mutate(updated, {
-      onSuccess: () => toast.success('Hareket türü silindi')
+      onSuccess: () => {
+        toast.success('Hareket türü silindi');
+        queryClient.invalidateQueries({ queryKey: ['system_settings'] });
+      }
+    });
+  };
+
+  const toggleMovementTypeActive = (code: string) => {
+    const updatedTypes = settings.movementTypes.map((t: any) => 
+      t.code === code ? { ...t, is_active: t.is_active === false ? true : false } : t
+    );
+    updateMutation.mutate({ ...settings, movementTypes: updatedTypes }, {
+      onSuccess: () => {
+        toast.success('Hareket türü durumu güncellendi');
+        queryClient.invalidateQueries({ queryKey: ['system_settings'] });
+      }
     });
   };
 
@@ -831,14 +847,24 @@ const SystemSettingsView = () => {
                     </div>
                   ) : (
                     <div className="flex justify-between items-center">
-                      <span><strong className="mr-2 px-2 py-0.5 bg-primary/10 text-primary rounded">{type.code}</strong> {type.label}</span>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => startEditMovement(idx, type)} disabled={updateMutation.isPending} className="text-blue-500 hover:text-blue-700 h-8 w-8 p-0">
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => removeMovementType(type.code)} disabled={updateMutation.isPending} className="text-red-500 hover:text-red-700 h-8 w-8 p-0">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <span className={type.is_active === false ? "opacity-50 line-through" : ""}><strong className="mr-2 px-2 py-0.5 bg-primary/10 text-primary rounded no-underline">{type.code}</strong> {type.label}</span>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{type.is_active === false ? 'Pasif' : 'Aktif'}</span>
+                          <Switch
+                            checked={type.is_active !== false}
+                            onCheckedChange={() => toggleMovementTypeActive(type.code)}
+                            disabled={updateMutation.isPending}
+                          />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => startEditMovement(idx, type)} disabled={updateMutation.isPending} className="text-blue-500 hover:text-blue-700 h-8 w-8 p-0">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => removeMovementType(type.code)} disabled={updateMutation.isPending} className="text-red-500 hover:text-red-700 h-8 w-8 p-0">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
