@@ -45,7 +45,10 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
     // 2. Map personnel to groups and shifts
     const groups: Record<string, { total: any[], name: string, criticalLimit: number }> = {};
     settings.departmentGroups.forEach((g: any) => {
-      groups[g.id] = { total: [], name: g.name, criticalLimit: g.criticalLimit };
+      const limit = dayType === 'weekend' 
+        ? (g.criticalLimitWeekend ?? g.criticalLimit ?? 1) 
+        : (g.criticalLimitWeekday ?? g.criticalLimit ?? 1);
+      groups[g.id] = { total: [], name: g.name, criticalLimit: limit };
     });
 
     const activePersonnel = personnelData.map(p => {

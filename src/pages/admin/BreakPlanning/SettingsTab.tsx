@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,15 +8,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any) => {
   const [newSlot, setNewSlot] = useState('');
+  
+  // Department Group State
   const [newDeptName, setNewDeptName] = useState('');
-  const [newDeptCrit, setNewDeptCrit] = useState('1');
-  const [newDeptIncluded, setNewDeptIncluded] = useState('');
+  const [newDeptCritWeekday, setNewDeptCritWeekday] = useState('1');
+  const [newDeptCritWeekend, setNewDeptCritWeekend] = useState('1');
+  const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
+
+  // Rules State
   const [newRuleSlot, setNewRuleSlot] = useState('');
   const [newRuleShifts, setNewRuleShifts] = useState('');
   const [newRuleDayType, setNewRuleDayType] = useState('weekday');
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ['unique_departments_break_planning'],
+    queryFn: async () => {
+      const { data } = await supabase.from('personnel').select('department').eq('is_active', true);
+      if (!data) return [];
+      const depts = new Set(data.map(d => d.department?.trim()).filter(Boolean));
+      return Array.from(depts).sort() as string[];
+    }
+  });
 
   const addSlot = () => {
     if (!newSlot) return;
@@ -24,17 +42,31 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
     setNewSlot('');
   };
 
+  const toggleDeptSelection = (dept: string) => {
+    setSelectedDepts(prev => prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]);
+  };
+
   const addDept = () => {
-    if (!newDeptName || !newDeptIncluded) return;
-    const depts = newDeptIncluded.split(',').map(s => s.trim()).filter(Boolean);
+    if (!newDeptName || selectedDepts.length === 0) return;
     const updated = {
       ...settings,
-      departmentGroups: [...(settings.departmentGroups || []), { id: Date.now().toString(), name: newDeptName, criticalLimit: parseInt(newDeptCrit) || 1, includedDepartments: depts }]
+      departmentGroups: [
+        ...(settings.departmentGroups || []), 
+        { 
+          id: Date.now().toString(), 
+          name: newDeptName, 
+          criticalLimitWeekday: parseInt(newDeptCritWeekday) || 1, 
+          criticalLimitWeekend: parseInt(newDeptCritWeekend) || 1, 
+          includedDepartments: selectedDepts 
+        }
+      ]
     };
     setSettings(updated);
     handleSave(updated);
     setNewDeptName('');
-    setNewDeptIncluded('');
+    setSelectedDepts([]);
+    setNewDeptCritWeekday('1');
+    setNewDeptCritWeekend('1');
   };
 
   const addRule = () => {
@@ -76,20 +108,65 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
       <Card>
         <CardHeader><CardTitle>2. Reyon Grupları ve Kritik Sınırlar</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
-            <Input placeholder="Grup Adı (Örn: Giriş Kat)" value={newDeptName} onChange={e => setNewDeptName(e.target.value)} />
-            <Input placeholder="Dahil Reyonlar (Virgülle ayırın: ERKEK, KADIN)" className="md:col-span-2" value={newDeptIncluded} onChange={e => setNewDeptIncluded(e.target.value)} />
-            <div className="flex gap-2">
-              <Input type="number" placeholder="Kritik Limit" value={newDeptCrit} onChange={e => setNewDeptCrit(e.target.value)} />
-              <Button onClick={addDept}><Plus className="w-4 h-4" /></Button>
+          <div className="space-y-4 mb-6 p-4 border rounded-md bg-muted/20">
+            <h4 className="font-medium text-sm">Yeni Grup Oluştur</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Grup Adı</Label>
+                <Input placeholder="Örn: Giriş Kat" value={newDeptName} onChange={e => setNewDeptName(e.target.value)} />
+              </div>
+              <div className="flex gap-4">
+                <div className="space-y-2 flex-1">
+                  <Label>Hafta İçi Kritik Sınır</Label>
+                  <Input type="number" min="0" value={newDeptCritWeekday} onChange={e => setNewDeptCritWeekday(e.target.value)} />
+                </div>
+                <div className="space-y-2 flex-1">
+                  <Label>Hafta Sonu Kritik Sınır</Label>
+                  <Input type="number" min="0" value={newDeptCritWeekend} onChange={e => setNewDeptCritWeekend(e.target.value)} />
+                </div>
+              </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label>Dahil Edilecek Reyonları Seçin</Label>
+              {departments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Sistemde kayıtlı reyon bulunamadı.</p>
+              ) : (
+                <div className="flex flex-wrap gap-4 mt-2 p-4 border rounded-md bg-background">
+                  {departments.map((dept) => (
+                    <div key={dept} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`dept-${dept}`} 
+                        checked={selectedDepts.includes(dept)} 
+                        onCheckedChange={() => toggleDeptSelection(dept)} 
+                      />
+                      <label htmlFor={`dept-${dept}`} className="text-sm font-medium leading-none cursor-pointer">
+                        {dept}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Button onClick={addDept} className="w-full mt-4" disabled={!newDeptName || selectedDepts.length === 0}>
+              <Plus className="w-4 h-4 mr-2" /> Grubu Ekle
+            </Button>
           </div>
+
           <div className="space-y-2">
+            <h4 className="font-medium text-sm mb-2">Kayıtlı Gruplar</h4>
+            {(settings.departmentGroups || []).length === 0 && <p className="text-sm text-muted-foreground">Henüz kayıtlı grup yok.</p>}
             {(settings.departmentGroups || []).map((g: any) => (
               <div key={g.id} className="flex justify-between items-center p-3 border rounded">
                 <div>
-                  <p className="font-semibold">{g.name} <span className="text-muted-foreground text-xs font-normal ml-2">(Minimum {g.criticalLimit} Kişi Kalmalı)</span></p>
-                  <p className="text-xs text-muted-foreground">{g.includedDepartments.join(', ')}</p>
+                  <p className="font-semibold">{g.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Reyonlar: <span className="font-medium">{g.includedDepartments?.join(', ')}</span>
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1 font-medium">
+                    Kritik Sınır: Hafta İçi ({g.criticalLimitWeekday ?? g.criticalLimit ?? 1}), Hafta Sonu ({g.criticalLimitWeekend ?? g.criticalLimit ?? 1})
+                  </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => {
                   const updated = { ...settings, departmentGroups: settings.departmentGroups.filter((x: any) => x.id !== g.id) };
