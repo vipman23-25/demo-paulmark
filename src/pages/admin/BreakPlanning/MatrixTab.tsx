@@ -55,6 +55,13 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
       const shift = todayShifts.find((s: any) => s.personnel_id === p.id);
       if (!shift || !shift.shift_type || shift.shift_type === '-') return null; // Not working today
 
+      const cleanVal = shift.shift_type.split('+')[0].trim().toUpperCase();
+      
+      // Check if this shift type is in the excluded movement types list
+      if (settings.excludedMovementTypes && settings.excludedMovementTypes.includes(cleanVal)) {
+        return null;
+      }
+
       // Determine group
       let groupId = 'other';
       for (const g of settings.departmentGroups) {
@@ -73,7 +80,6 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
       }
 
       const upVal = shift.shift_type.toUpperCase();
-      const cleanVal = upVal.split('+')[0].trim();
       let category = 'DİĞER';
       if (cleanVal === 'S' || cleanVal === 'SABAH') category = 'SABAH';
       else if (cleanVal === 'A' || cleanVal === 'AKŞAM') category = 'AKŞAM';

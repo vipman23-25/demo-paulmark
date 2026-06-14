@@ -32,6 +32,19 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
     }
   });
 
+  const { data: movementTypes = [], isLoading: isLoadingMovements } = useQuery({
+    queryKey: ['system_settings_movement_types'],
+    queryFn: async () => {
+      const { data } = await supabase.from('system_settings' as any).select('*').eq('setting_key', 'general').maybeSingle();
+      return data?.setting_value?.movementTypes || [
+        { code: 'İ', label: 'İzin' },
+        { code: 'R', label: 'Hastalık İzni' },
+        { code: 'M', label: 'Muafiyet' },
+        { code: 'B', label: 'Başka Görev' }
+      ];
+    }
+  });
+
   // Group personnel by department
   const groupedPersonnel = personnelData.reduce((acc: any, p: any) => {
     const dept = p.department?.trim() || 'Diğer';
@@ -95,6 +108,17 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
     setSettings(updated);
     handleSave(updated);
     setNewRuleShifts('');
+  };
+
+  const toggleExcludedMovement = (code: string) => {
+    const currentExcluded = settings.excludedMovementTypes || [];
+    const updatedExcluded = currentExcluded.includes(code)
+      ? currentExcluded.filter((c: string) => c !== code)
+      : [...currentExcluded, code];
+      
+    const updated = { ...settings, excludedMovementTypes: updatedExcluded };
+    setSettings(updated);
+    handleSave(updated);
   };
 
   return (
@@ -259,6 +283,36 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
                 </div>
               );
             })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>4. Hariç Tutulacak Hareket Türleri</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Aşağıda seçtiğiniz hareket türlerine sahip personeller, mola planlamasına <strong>dahil edilmeyecektir</strong>. 
+              (Örneğin: İzinli veya raporlu olan personellerin mola matrisinde görünmesini engellemek için seçin.)
+            </p>
+            {isLoadingMovements ? (
+              <p className="text-sm text-muted-foreground">Hareket türleri yükleniyor...</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-md bg-muted/10">
+                {movementTypes.map((mt: any) => (
+                  <div key={mt.code} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`mt-${mt.code}`} 
+                      checked={(settings.excludedMovementTypes || []).includes(mt.code)} 
+                      onCheckedChange={() => toggleExcludedMovement(mt.code)} 
+                    />
+                    <label htmlFor={`mt-${mt.code}`} className="text-sm font-medium leading-none cursor-pointer flex gap-2 items-center">
+                      <Badge variant="outline">{mt.code}</Badge> {mt.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
