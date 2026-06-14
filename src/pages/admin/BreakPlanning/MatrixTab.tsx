@@ -58,9 +58,17 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
       // Determine group
       let groupId = 'other';
       for (const g of settings.departmentGroups) {
-        if (g.includedDepartments.some((d: string) => p.department?.toUpperCase().includes(d.toUpperCase()))) {
-          groupId = g.id;
-          break;
+        if (g.includedPersonnelIds && g.includedPersonnelIds.length > 0) {
+          if (g.includedPersonnelIds.includes(p.id)) {
+            groupId = g.id;
+            break;
+          }
+        } else if (g.includedDepartments) {
+          // Fallback to old behavior
+          if (g.includedDepartments.some((d: string) => p.department?.toUpperCase().includes(d.toUpperCase()))) {
+            groupId = g.id;
+            break;
+          }
         }
       }
 
@@ -143,7 +151,7 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
                   <TableHead>Reyon Adı</TableHead>
                   <TableHead>Mola Saati</TableHead>
                   <TableHead>Moladaki Kişiler</TableHead>
-                  <TableHead>Kalan Kişiler (Sayı)</TableHead>
+                  <TableHead>Kalan Hesaplaması</TableHead>
                   <TableHead>Durum</TableHead>
                 </TableRow>
               </TableHeader>
@@ -175,7 +183,13 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold">{remainingCount} Kişi</div>
+                          <div className="flex flex-col gap-1 min-w-[120px]">
+                            <div className="text-xs text-muted-foreground flex justify-between"><span>Mevcut:</span> <span>{g.total.length} Kişi</span></div>
+                            <div className="text-xs text-red-500 flex justify-between"><span>Molada:</span> <span>- {onBreak.length} Kişi</span></div>
+                            <div className={`font-bold border-t pt-1 mt-1 flex justify-between ${isCritical ? 'text-red-600' : 'text-green-600'}`}>
+                              <span>Kalan:</span> <span>{remainingCount} Kişi</span>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {isCritical ? (

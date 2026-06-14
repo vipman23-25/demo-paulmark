@@ -17,22 +17,29 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptCritWeekday, setNewDeptCritWeekday] = useState('1');
   const [newDeptCritWeekend, setNewDeptCritWeekend] = useState('1');
-  const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
+  const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<string[]>([]);
 
   // Rules State
   const [newRuleSlot, setNewRuleSlot] = useState('');
   const [newRuleShifts, setNewRuleShifts] = useState('');
   const [newRuleDayType, setNewRuleDayType] = useState('weekday');
 
-  const { data: departments = [] } = useQuery({
-    queryKey: ['unique_departments_break_planning'],
+  const { data: personnelData = [], isLoading: isLoadingPersonnel } = useQuery({
+    queryKey: ['personnel_for_break_planning'],
     queryFn: async () => {
-      const { data } = await supabase.from('personnel').select('department').eq('is_active', true);
-      if (!data) return [];
-      const depts = new Set(data.map(d => d.department?.trim()).filter(Boolean));
-      return Array.from(depts).sort() as string[];
+      const { data } = await supabase.from('personnel').select('id, first_name, last_name, department').eq('is_active', true);
+      return data || [];
     }
   });
+
+  // Group personnel by department
+  const groupedPersonnel = personnelData.reduce((acc: any, p: any) => {
+    const dept = p.department?.trim() || 'Diğer';
+    if (!acc[dept]) acc[dept] = [];
+    acc[dept].push(p);
+    return acc;
+  }, {});
+  const sortedDepartments = Object.keys(groupedPersonnel).sort();
 
   const addSlot = () => {
     if (!newSlot) return;
@@ -42,12 +49,21 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
     setNewSlot('');
   };
 
-  const toggleDeptSelection = (dept: string) => {
-    setSelectedDepts(prev => prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]);
+  const togglePersonnelSelection = (id: string) => {
+    setSelectedPersonnelIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleDepartmentSelection = (dept: string, selectAll: boolean) => {
+    const deptPersonnelIds = groupedPersonnel[dept].map((p: any) => p.id);
+    if (selectAll) {
+      setSelectedPersonnelIds(prev => Array.from(new Set([...prev, ...deptPersonnelIds])));
+    } else {
+      setSelectedPersonnelIds(prev => prev.filter(id => !deptPersonnelIds.includes(id)));
+    }
   };
 
   const addDept = () => {
-    if (!newDeptName || selectedDepts.length === 0) return;
+    if (!newDeptName || selectedPersonnelIds.length === 0) return;
     const updated = {
       ...settings,
       departmentGroups: [
@@ -57,14 +73,14 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
           name: newDeptName, 
           criticalLimitWeekday: parseInt(newDeptCritWeekday) || 1, 
           criticalLimitWeekend: parseInt(newDeptCritWeekend) || 1, 
-          includedDepartments: selectedDepts 
+          includedPersonnelIds: selectedPersonnelIds 
         }
       ]
     };
     setSettings(updated);
     handleSave(updated);
     setNewDeptName('');
-    setSelectedDepts([]);
+    setSelectedPersonnelIds([]);
     setNewDeptCritWeekday('1');
     setNewDeptCritWeekend('1');
   };
@@ -128,29 +144,54 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
             </div>
             
             <div className="space-y-2">
-              <Label>Dahil Edilecek Reyonları Seçin</Label>
-              {departments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sistemde kayıtlı reyon bulunamadı.</p>
+              <Label>Dahil Edilecek Personelleri / Reyonları Seçin</Label>
+              {isLoadingPersonnel ? (
+                <p className="text-sm text-muted-foreground">Personeller yükleniyor...</p>
+              ) : sortedDepartments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Sistemde aktif personel bulunamadı.</p>
               ) : (
-                <div className="flex flex-wrap gap-4 mt-2 p-4 border rounded-md bg-background">
-                  {departments.map((dept) => (
-                    <div key={dept} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`dept-${dept}`} 
-                        checked={selectedDepts.includes(dept)} 
-                        onCheckedChange={() => toggleDeptSelection(dept)} 
-                      />
-                      <label htmlFor={`dept-${dept}`} className="text-sm font-medium leading-none cursor-pointer">
-                        {dept}
-                      </label>
-                    </div>
-                  ))}
+                <div className="max-h-[300px] overflow-y-auto border rounded-md p-4 bg-background space-y-6">
+                  {sortedDepartments.map((dept) => {
+                    const deptPersonnel = groupedPersonnel[dept];
+                    const deptPersonnelIds = deptPersonnel.map((p: any) => p.id);
+                    const allSelected = deptPersonnelIds.every((id: string) => selectedPersonnelIds.includes(id));
+                    const someSelected = deptPersonnelIds.some((id: string) => selectedPersonnelIds.includes(id));
+                    
+                    return (
+                      <div key={dept} className="space-y-2 border-b pb-4 last:border-0 last:pb-0">
+                        <div className="flex items-center space-x-2 bg-muted/50 p-2 rounded-md">
+                          <Checkbox 
+                            id={`dept-${dept}`} 
+                            checked={allSelected} 
+                            onCheckedChange={(checked) => toggleDepartmentSelection(dept, checked === true)} 
+                          />
+                          <label htmlFor={`dept-${dept}`} className="text-sm font-bold leading-none cursor-pointer flex-1">
+                            {dept} Reyonu Tümünü Seç ({deptPersonnel.length} Kişi)
+                          </label>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pl-6">
+                          {deptPersonnel.map((p: any) => (
+                            <div key={p.id} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={`personnel-${p.id}`} 
+                                checked={selectedPersonnelIds.includes(p.id)} 
+                                onCheckedChange={() => togglePersonnelSelection(p.id)} 
+                              />
+                              <label htmlFor={`personnel-${p.id}`} className="text-sm leading-none cursor-pointer">
+                                {p.first_name} {p.last_name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <Button onClick={addDept} className="w-full mt-4" disabled={!newDeptName || selectedDepts.length === 0}>
-              <Plus className="w-4 h-4 mr-2" /> Grubu Ekle
+            <Button onClick={addDept} className="w-full mt-4" disabled={!newDeptName || selectedPersonnelIds.length === 0}>
+              <Plus className="w-4 h-4 mr-2" /> Grubu Ekle ({selectedPersonnelIds.length} Kişi Seçildi)
             </Button>
           </div>
 
@@ -162,7 +203,7 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
                 <div>
                   <p className="font-semibold">{g.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Reyonlar: <span className="font-medium">{g.includedDepartments?.join(', ')}</span>
+                    {g.includedPersonnelIds ? `${g.includedPersonnelIds.length} Personel Tanımlı` : `Reyonlar: ${g.includedDepartments?.join(', ')}`}
                   </p>
                   <p className="text-xs text-blue-600 mt-1 font-medium">
                     Kritik Sınır: Hafta İçi ({g.criticalLimitWeekday ?? g.criticalLimit ?? 1}), Hafta Sonu ({g.criticalLimitWeekend ?? g.criticalLimit ?? 1})
