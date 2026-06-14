@@ -34,16 +34,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { calculateEntitlement, calculateUsedLeave } from '@/lib/leaveUtils';
 import DailyBreakTracker from '@/components/employee/DailyBreakTracker';
 import ColleagueShiftPanel from '@/components/employee/ColleagueShiftPanel';
+import { differenceInYears, differenceInMonths, differenceInDays, addYears, addMonths } from 'date-fns';
 
 const DAYS = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 
 const calculateWorkDuration = (startDate: string | null | undefined) => {
-  if (!startDate) return { months: 0, days: 0 };
+  if (!startDate) return { years: 0, months: 0, days: 0, totalDays: 0 };
   const start = new Date(startDate);
-  if (isNaN(start.getTime())) return { months: 0, days: 0 };
+  if (isNaN(start.getTime())) return { years: 0, months: 0, days: 0, totalDays: 0 };
+  start.setHours(0, 0, 0, 0);
   const now = new Date();
-  const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 6000 * 60 * 24));
-  return { months: Math.floor(diffDays / 30), days: diffDays % 30 };
+  now.setHours(0, 0, 0, 0);
+
+  const diffMs = now.getTime() - start.getTime();
+  const totalDays = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1);
+
+  if (totalDays === 0) return { years: 0, months: 0, days: 0, totalDays: 0 };
+
+  const years = differenceInYears(now, start);
+  const dateAfterYears = addYears(start, years);
+  const months = differenceInMonths(now, dateAfterYears);
+  const dateAfterMonths = addMonths(dateAfterYears, months);
+  const days = differenceInDays(now, dateAfterMonths) + 1;
+
+  return { years, months, days, totalDays };
 };
 
 function getEmployeeStatus(personnel: any, shiftRaw: string, myTodayShift: any) {
@@ -838,7 +852,7 @@ const EmployeePanel = () => {
     toggleDayMutation.mutate({ day, isSelected, description: dayOffDescription });
   };
 
-  const { months, days } = calculateWorkDuration(personnel.start_date);
+  const { years, months, days, totalDays } = calculateWorkDuration(personnel.start_date);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -849,7 +863,7 @@ const EmployeePanel = () => {
             <h1 className="text-2xl font-bold text-foreground">{personnel.first_name} {personnel.last_name}</h1>
             <p className="text-muted-foreground">{personnel.department}</p>
             <p className="text-sm text-green-600 dark:text-green-400 font-medium mt-1">
-              ⏱️ {months} ay {days} gün ({(months * 30 + days)} gün) çalışıyor
+              ⏱️ {years > 0 ? `${years} yıl ` : ''}{months > 0 ? `${months} ay ` : ''}{days} gün ({totalDays} gün) çalışıyor
             </p>
           </div>
           <div className="flex flex-wrap gap-2 justify-end">
