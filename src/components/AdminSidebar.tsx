@@ -26,7 +26,6 @@ const menuItems = [
   { title: 'Kontrol Paneli', url: '/admin', icon: LayoutDashboard },
   { title: 'Personeller', url: '/admin/personnel', icon: Users },
   { title: 'Mola Takibi', url: '/admin/breaks', icon: Clock },
-  { title: 'Mola Planlama', url: '/admin/break-planning', icon: Target },
   { title: 'Hareketler', url: '/admin/movements', icon: Activity },
   { title: 'İzin Günleri', url: '/admin/day-off', icon: Calendar },
   { title: 'Fazla Mesai', url: '/admin/overtime', icon: Timer },

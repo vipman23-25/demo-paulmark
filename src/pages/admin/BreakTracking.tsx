@@ -11,6 +11,8 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import BreakPlanning from './BreakPlanning';
 
 const BreakTracking = () => {
   const queryClient = useQueryClient();
@@ -146,9 +148,20 @@ const BreakTracking = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Clock className="h-6 w-6" /> Mola Takibi
+          <Clock className="h-6 w-6" /> Mola Takibi ve Planlama
         </h2>
-        <div className="flex items-center gap-2">
+      </div>
+
+      <Tabs defaultValue="tracking" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="tracking">Gerçek Zamanlı Takip</TabsTrigger>
+          <TabsTrigger value="planning">Akıllı Planlama</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tracking" className="space-y-6 mt-0">
+          <div className="flex justify-between items-center flex-wrap gap-4 mb-4">
+            <div></div>
+            <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => refetch()} title="Yenile">
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -256,6 +269,12 @@ const BreakTracking = () => {
           </div>
         </CardContent>
       </Card>
+      </TabsContent>
+
+      <TabsContent value="planning" className="mt-0">
+        <BreakPlanning />
+      </TabsContent>
+      </Tabs>
     </div>
   );
 };

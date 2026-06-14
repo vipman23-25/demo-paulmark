@@ -77,7 +77,6 @@ const AdminLayout = retryLazy(() => import("./layouts/AdminLayout"));
 const Dashboard = retryLazy(() => import("./pages/admin/Dashboard"));
 const PersonnelManagement = retryLazy(() => import("./pages/admin/PersonnelManagement"));
 const BreakTracking = retryLazy(() => import("./pages/admin/BreakTracking"));
-const BreakPlanning = retryLazy(() => import("./pages/admin/BreakPlanning"));
 const MovementManagement = retryLazy(() => import("./pages/admin/MovementManagement"));
 const DayOffView = retryLazy(() => import("./pages/admin/DayOffView"));
 const OvertimeManagement = retryLazy(() => import("./pages/admin/OvertimeManagement"));
@@ -143,7 +142,6 @@ const App = () => (
                     <Route index element={<Dashboard />} />
                     <Route path="personnel" element={<PersonnelManagement />} />
                     <Route path="breaks" element={<BreakTracking />} />
-                    <Route path="break-planning" element={<BreakPlanning />} />
                     <Route path="movements" element={<MovementManagement />} />
                     <Route path="day-off" element={<DayOffView />} />
                     <Route path="overtime" element={<OvertimeManagement />} />
