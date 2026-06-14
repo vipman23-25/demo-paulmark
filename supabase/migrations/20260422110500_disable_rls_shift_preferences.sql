@@ -1,0 +1,1 @@
+ALTER TABLE public.shift_preferences DISABLE ROW LEVEL SECURITY;

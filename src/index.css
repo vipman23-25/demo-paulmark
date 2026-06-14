@@ -1,0 +1,214 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 220 30% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 10%;
+
+    --primary: 220 70% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 30% 20%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 160 60% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 220 70% 50%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 220 30% 12%;
+    --sidebar-foreground: 220 10% 85%;
+    --sidebar-primary: 220 70% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 18%;
+    --sidebar-accent-foreground: 220 10% 90%;
+    --sidebar-border: 220 25% 20%;
+    --sidebar-ring: 220 70% 60%;
+
+    --success: 160 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 200 80% 50%;
+    --info-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 220 10% 92%;
+    --card: 220 25% 12%;
+    --card-foreground: 220 10% 92%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 220 10% 92%;
+    --primary: 220 70% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 10% 85%;
+    --muted: 220 20% 16%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 160 60% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 220 70% 60%;
+    --sidebar-background: 220 30% 6%;
+    --sidebar-foreground: 220 10% 85%;
+    --sidebar-primary: 220 70% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 12%;
+    --sidebar-accent-foreground: 220 10% 90%;
+    --sidebar-border: 220 25% 14%;
+    --sidebar-ring: 220 70% 60%;
+    --success: 160 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 200 80% 50%;
+    --info-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 dark:border-slate-700/50 shadow-xl;
+  }
+  
+  .glass-panel {
+    @apply bg-white/50 dark:bg-slate-900/50 backdrop-blur-lg border border-white/20 dark:border-slate-700/50;
+  }
+
+  /* Anti-Copy Protection Classes */
+  .select-none-global {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+  }
+  
+  .select-none-global input, 
+  .select-none-global textarea,
+  .select-none-global select {
+    -webkit-user-select: auto !important;
+    -moz-user-select: auto !important;
+    -ms-user-select: auto !important;
+    user-select: auto !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 5mm;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background-color: white !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+  * {
+    scrollbar-width: none !important;
+  }
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  .break-inside-avoid {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  /* Vardiya Tablosunu tek sayfaya sığdırmaya zorla */
+  #shift-table-capture {
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    height: 98vh !important; /* A4 dikey tam ekran yüksekliği */
+    max-height: 98vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  /* Tabloları tam 1 sayfaya sığdırmak için esnek yükseklik */
+  #shift-table-capture > div {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #shift-table-capture > div:nth-child(2) {
+    flex: 1 1 auto; /* Ana tablo esnesin */
+  }
+
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    font-size: clamp(7px, 1.1vh, 13px) !important;
+    line-height: 1.1 !important;
+  }
+  
+  th, td {
+    padding: 0px 2px !important;
+    height: auto !important;
+  }
+  
+  h2, h3 {
+    font-size: clamp(10px, 1.4vh, 14px) !important;
+    margin-top: 2px !important;
+    margin-bottom: 2px !important;
+  }
+  
+  /* Fazla boşlukları ve gereksiz marginleri sıfırla */
+  .mt-8, .mt-4, .mt-2, .mb-4, .pt-6, .pb-4 { 
+    margin: 0 !important; 
+    padding-top: 0 !important; 
+    padding-bottom: 0 !important; 
+  }
+  
+  .shadow-md {
+    box-shadow: none !important;
+    border: 1px solid #000 !important;
+  }
+}

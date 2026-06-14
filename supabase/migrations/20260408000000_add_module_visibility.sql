@@ -1,0 +1,1 @@
+ALTER TABLE personnel ADD COLUMN IF NOT EXISTS module_visibility JSONB DEFAULT '{"showBreak": true, "showLeave": true, "showSales": true, "showAnnouncements": true, "showSurveys": true, "showMovements": true, "showOvertime": true, "showOtherPersonnel": false}'::jsonb;
