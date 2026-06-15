@@ -1844,7 +1844,7 @@ const ColleagueShiftPanel = ({ dashboardData, personnel }: { dashboardData: any,
 
     const activeMovement = dashboardData.colleagueMovements?.find((m: any) => {
       if (m.personnel_id !== person.id) return false;
-      return m.start_date <= targetStr && m.end_date >= targetStr;
+      return m.start_date <= targetStr && (!m.end_date || m.end_date >= targetStr);
     });
 
     if (activeMovement) {
