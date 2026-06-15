@@ -302,7 +302,7 @@ const Dashboard = ({ isManagerPanel = false }: { isManagerPanel?: boolean }) => 
       ] = await Promise.all([
         supabase.from('personnel').select('*').eq('is_active', true),
         supabase.from('break_records').select('*').gte('break_start', todayIsoStr),
-        supabase.from('personnel_movements').select('*').or(`end_date.is.null,end_date.gte.${todayIsoStr}`),
+        supabase.from('personnel_movements').select('*').or(`end_date.is.null,end_date.gte.${todayStr}`),
         supabase.from('weekly_day_off').select('*').gte('created_at', weekStartStr),
         supabase.from('cargo_shipments').select('*').gte('arrival_date', weekStartStr),
         supabase.from('shift_schedules').select('*').eq('week_start_date', weekStartStr),

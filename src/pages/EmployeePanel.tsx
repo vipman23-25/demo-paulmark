@@ -365,15 +365,16 @@ const EmployeePanel = () => {
       const { data: deptCoworkers } = await supabase.from('personnel' as any).select('*').eq('department', personnel.department || 'Bilinmiyor');
       const coworkerIds = (deptCoworkers || []).map((c: any) => c.id);
       
-      const todayIsoDate = new Date().toISOString().split('T')[0];
+      const todayDateStr = format(todayDate, 'yyyy-MM-dd');
+      
       const [
          { data: colleagueBreaks },
          { data: colleagueMovements },
          { data: colleagueDayOffs },
          { data: genderRules }
       ] = await Promise.all([
-         supabase.from('break_records' as any).select('*, personnel(first_name, last_name, department)').gte('break_start', todayIsoDate),
-         coworkerIds.length > 0 ? supabase.from('personnel_movements' as any).select('*').in('personnel_id', coworkerIds).or(`end_date.is.null,end_date.gte.${todayIsoDate}`).order('start_date', { ascending: false }) : { data: [] },
+         supabase.from('break_records' as any).select('*, personnel(first_name, last_name, department)').gte('break_start', todayDateStr),
+         coworkerIds.length > 0 ? supabase.from('personnel_movements' as any).select('*').in('personnel_id', coworkerIds).or(`end_date.is.null,end_date.gte.${todayDateStr}`).order('start_date', { ascending: false }) : { data: [] },
          coworkerIds.length > 0 ? supabase.from('weekly_day_off' as any).select('*').in('personnel_id', coworkerIds) : { data: [] },
          supabase.from('shift_gender_rules' as any).select('*')
       ]);
@@ -1848,11 +1849,9 @@ const ColleagueShiftPanel = ({ dashboardData, personnel }: { dashboardData: any,
     });
 
     if (activeMovement) {
-      return {
-        title: activeMovement.movement_type || 'Raporlu/İzinli',
-        statusLabel: 'İzinli',
-        statusColor: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400'
-      };
+      if (activeMovement.movement_type === 'Mutfak') return { title: 'Mutfak', statusLabel: 'Görevde', statusColor: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400' };
+      if (activeMovement.movement_type === 'Depo') return { title: 'Depo', statusLabel: 'Görevde', statusColor: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400' };
+      return { title: activeMovement.movement_type || 'Görevde', statusLabel: 'Görevde', statusColor: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400' };
     }
 
     const row = dashboardData.weeklySchedule.find((r: any) => r['Ad Soyad']?.toString().trim() === fullName);
