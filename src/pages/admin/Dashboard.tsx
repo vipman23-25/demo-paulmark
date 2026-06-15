@@ -800,17 +800,18 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
 
                         return (
                           <div key={idx} className={`p-2 rounded flex justify-between items-center text-xs border ${isOff ? 'bg-red-50/50 border-red-100 dark:bg-red-950/20 dark:border-red-900/30' : 'bg-background border-border/50'}`}>
-                            <div className="flex flex-col gap-0.5 max-w-[80%]">
+                            <div className="flex flex-1 flex-wrap items-center gap-1.5">
                               <span className={`font-semibold truncate flex items-center gap-1 ${isOff ? 'text-red-700 dark:text-red-400 line-through opacity-70' : 'text-foreground'}`} title={person.name}>
-                                {formatDisplayName(person.name)} {getMovementBadge(person.name)}
+                                {formatDisplayName(person.name)} 
                               </span>
                               {!isOff && (
-                                <span className="text-[10px] text-muted-foreground truncate" title={person.val}>
+                                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border/50" title={person.val}>
                                   {person.val}
                                 </span>
                               )}
+                              {getMovementBadge(person.name)}
                               {assignedSlot && !hasStartedBreak && !isOff && (
-                                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800/30 whitespace-nowrap">
                                   ({assignedSlot.timeRange} / Molaya çıkacak)
                                 </span>
                               )}
