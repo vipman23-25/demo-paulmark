@@ -225,6 +225,12 @@ const MovementManagement = () => {
 
       const currentMonthHolidays = HOLIDAYS_2026.filter(h => h.date.startsWith(exportMonth));
 
+      const parseLocal = (dateStr: string, isEnd: boolean = false) => {
+          if (!dateStr) return new Date();
+          const [y, m, d] = dateStr.split('T')[0].split('-');
+          return new Date(Number(y), Number(m)-1, Number(d), isEnd ? 23 : 0, isEnd ? 59 : 0, isEnd ? 59 : 0);
+      };
+
       const targetOrder = ['Müdür', 'Kadın & Çocuk Reyon', 'Erkek Reyon', 'Kasiyer'];
       
       const getGroupedDept = (dept: string) => {
@@ -260,8 +266,8 @@ const MovementManagement = () => {
       const data = sortedPersonnel.map((p: any, index: number) => {
         const pMovements = movements.filter((m: any) => {
             if (m.personnel_id !== p.id) return false;
-            const mStart = new Date(m.start_date);
-            const mEnd = new Date(m.end_date || m.start_date);
+            const mStart = parseLocal(m.start_date);
+            const mEnd = parseLocal(m.end_date || m.start_date, true);
             const monthStart = new Date(`${startDateStr}T00:00:00`);
             const monthEnd = new Date(`${endDateStr}T23:59:59`);
             return mStart <= monthEnd && mEnd >= monthStart;
@@ -275,8 +281,8 @@ const MovementManagement = () => {
           const typeObj = movementTypes.find((mt: any) => mt.code === m.movement_type);
           const tLabel = (typeObj ? typeObj.label : m.movement_type).toLocaleUpperCase('tr-TR');
           
-          const mStartDateStr = format(new Date(m.start_date), 'dd.MM.yyyy');
-          const mEndDateStr = m.end_date ? format(new Date(m.end_date), 'dd.MM.yyyy') : mStartDateStr;
+          const mStartDateStr = format(parseLocal(m.start_date), 'dd.MM.yyyy');
+          const mEndDateStr = m.end_date ? format(parseLocal(m.end_date), 'dd.MM.yyyy') : mStartDateStr;
           
           const dateRangeStr = mStartDateStr === mEndDateStr ? mStartDateStr : `${mStartDateStr}-${mEndDateStr}`;
           
@@ -315,11 +321,9 @@ const MovementManagement = () => {
           const shiftOnHoliday = pShifts.find((s: any) => s.shift_date === h.date);
           
           const movementOnHoliday = pMovements.find((m: any) => {
-              const mStart = new Date(m.start_date);
-              const mEnd = new Date(m.end_date || m.start_date);
-              const hDate = new Date(`${h.date}T12:00:00`);
-              mStart.setHours(0,0,0,0);
-              mEnd.setHours(23,59,59,999);
+              const mStart = parseLocal(m.start_date);
+              const mEnd = parseLocal(m.end_date || m.start_date, true);
+              const hDate = parseLocal(h.date);
               return hDate >= mStart && hDate <= mEnd;
           });
 
@@ -340,8 +344,8 @@ const MovementManagement = () => {
                 return sum;
             }
 
-            const mStart = new Date(m.start_date);
-            const mEnd = new Date(m.end_date || m.start_date);
+            const mStart = parseLocal(m.start_date);
+            const mEnd = parseLocal(m.end_date || m.start_date, true);
             const monthStart = new Date(`${startDateStr}T00:00:00`);
             const monthEnd = new Date(`${endDateStr}T23:59:59`);
             
@@ -356,8 +360,8 @@ const MovementManagement = () => {
         const reportMonthStart = new Date(`${startDateStr}T00:00:00`);
         const reportMonthEnd = new Date(`${endDateStr}T23:59:59`);
         
-        const empStart = p.start_date ? new Date(p.start_date) : reportMonthStart;
-        const empEnd = p.end_date ? new Date(p.end_date) : reportMonthEnd;
+        const empStart = p.start_date ? parseLocal(p.start_date) : reportMonthStart;
+        const empEnd = p.end_date ? parseLocal(p.end_date, true) : reportMonthEnd;
 
         if (empStart > reportMonthEnd || empEnd < reportMonthStart) {
             baseDays = 0;
@@ -390,11 +394,9 @@ const MovementManagement = () => {
           const shiftOnHoliday = pShifts.find((s: any) => s.shift_date === h.date);
           
           const movementOnHoliday = pMovements.find((m: any) => {
-              const mStart = new Date(m.start_date);
-              const mEnd = new Date(m.end_date || m.start_date);
-              const hDate = new Date(`${h.date}T12:00:00`);
-              mStart.setHours(0,0,0,0);
-              mEnd.setHours(23,59,59,999);
+              const mStart = parseLocal(m.start_date);
+              const mEnd = parseLocal(m.end_date || m.start_date, true);
+              const hDate = parseLocal(h.date);
               return hDate >= mStart && hDate <= mEnd;
           });
 
