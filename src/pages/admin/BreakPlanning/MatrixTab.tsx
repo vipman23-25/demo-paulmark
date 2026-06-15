@@ -87,15 +87,30 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
                   const g = matrix.groups[groupId];
                   if (g.total.length === 0) return null;
 
-                  return matrix.slots.map((slot: any, index: number) => {
+                  const activeSlots = matrix.slots.filter((slot: any) => (slot.assignments[groupId] || []).length > 0);
+
+                  if (activeSlots.length === 0) {
+                    return (
+                      <TableRow key={`empty-${groupId}`} className="border-b-4 border-b-muted">
+                        <TableCell className="font-semibold align-top bg-muted/20 border-r">
+                          {g.name}
+                          <div className="text-xs text-muted-foreground font-normal mt-1">Toplam: {g.total.length} Kişi</div>
+                          <div className="text-xs text-muted-foreground font-normal">Kritik: {g.criticalLimit} Kişi</div>
+                        </TableCell>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-4">Molaya çıkacak personel bulunamadı.</TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  return activeSlots.map((slot: any, index: number) => {
                     const onBreak = slot.assignments[groupId] || [];
                     const remainingCount = g.total.length - onBreak.length;
                     const isCritical = remainingCount < g.criticalLimit;
 
                     return (
-                      <TableRow key={`${groupId}-${slot.id}`} className={index === matrix.slots.length - 1 ? 'border-b-4 border-b-muted' : ''}>
+                      <TableRow key={`${groupId}-${slot.id}`} className={index === activeSlots.length - 1 ? 'border-b-4 border-b-muted' : ''}>
                         {index === 0 && (
-                          <TableCell rowSpan={matrix.slots.length} className="font-semibold align-top bg-muted/20 border-r">
+                          <TableCell rowSpan={activeSlots.length} className="font-semibold align-top bg-muted/20 border-r">
                             {g.name}
                             <div className="text-xs text-muted-foreground font-normal mt-1">Toplam: {g.total.length} Kişi</div>
                             <div className="text-xs text-muted-foreground font-normal">Kritik: {g.criticalLimit} Kişi</div>
