@@ -163,20 +163,43 @@ const EmployeePanel = () => {
 
   useEffect(() => {
     if (!personnel?.id) return;
+    
+    let debounceTimer1: NodeJS.Timeout;
+    let debounceTimer2: NodeJS.Timeout;
+    
+    const handleDashboardUpdate = () => {
+      clearTimeout(debounceTimer1);
+      const jitter = Math.random() * 3000;
+      debounceTimer1 = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['employee_dashboard'] });
+      }, 500 + jitter);
+    };
+
+    const handleMatrixUpdate = () => {
+      clearTimeout(debounceTimer2);
+      const jitter = Math.random() * 2000;
+      debounceTimer2 = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['employee_break_matrix'] });
+      }, 500 + jitter);
+    };
+
     const channel = supabase
       .channel(`employee_realtime_${personnel.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'break_records' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['employee_dashboard'] });
-        queryClient.invalidateQueries({ queryKey: ['employee_break_matrix'] });
+        handleDashboardUpdate();
+        handleMatrixUpdate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel_movements' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['employee_dashboard'] });
+        handleDashboardUpdate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel', filter: `id=eq.${personnel.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['employee_personnel'] });
       })
       .subscribe();
+      
     return () => {
+      clearTimeout(debounceTimer1);
+      clearTimeout(debounceTimer2);
       supabase.removeChannel(channel);
     };
   }, [personnel?.id, queryClient]);

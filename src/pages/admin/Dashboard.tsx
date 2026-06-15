@@ -194,16 +194,23 @@ const Dashboard = ({ isManagerPanel = false }: { isManagerPanel?: boolean }) => 
   };
 
   useEffect(() => {
+    let debounceTimer: NodeJS.Timeout;
+    
+    const handleUpdate = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['admin_dashboard_data'] });
+      }, 1000);
+    };
+
     const channel = supabase
       .channel('dashboard_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'break_records' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin_dashboard_data'] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel_movements' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin_dashboard_data'] });
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'break_records' }, handleUpdate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel_movements' }, handleUpdate)
       .subscribe();
+      
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
