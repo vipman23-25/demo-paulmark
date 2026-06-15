@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { MapPin, CalendarDays, Umbrella, Coffee, ImagePlus, UserCheck, Timer, Calendar, Info, Clock, Activity, Target, LogOut, Bell, Package, Plus, Minus, Truck, Trash2, Settings, RefreshCw, Smartphone } from "lucide-react";
+import { MapPin, CalendarDays, Umbrella, Coffee, ImagePlus, UserCheck, Timer, Calendar, Info, Clock, Activity, Target, LogOut, Bell, Package, Plus, Minus, Truck, Trash2, Settings, RefreshCw, Smartphone, AlertTriangle } from "lucide-react";
 import { format, startOfWeek } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { requestNotificationPermission, subscribeUserToPush } from '@/utils/pushSubscription';
