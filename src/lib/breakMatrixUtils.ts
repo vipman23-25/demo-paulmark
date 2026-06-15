@@ -115,3 +115,27 @@ export const getPersonnelAssignedSlot = (matrix: any, personnelId: string) => {
   }
   return null;
 };
+
+export const checkBreakViolation = (breakStartStr: string, assignedSlotTimeRange: string, toleranceMinutes: number = 5): 'early' | 'late' | 'none' => {
+  if (!breakStartStr || !assignedSlotTimeRange) return 'none';
+  
+  // timeRange is like "13:30 - 14:00"
+  const startStr = assignedSlotTimeRange.split('-')[0]?.trim();
+  if (!startStr || !startStr.includes(':')) return 'none';
+  
+  const [slotHour, slotMin] = startStr.split(':').map(Number);
+  if (isNaN(slotHour) || isNaN(slotMin)) return 'none';
+  
+  const breakStart = new Date(breakStartStr);
+  if (isNaN(breakStart.getTime())) return 'none';
+  
+  // Create a date object for the slot start on the same day as break_start
+  const slotStart = new Date(breakStart);
+  slotStart.setHours(slotHour, slotMin, 0, 0);
+  
+  const diffMinutes = (breakStart.getTime() - slotStart.getTime()) / (1000 * 60);
+  
+  if (diffMinutes < -toleranceMinutes) return 'early';
+  if (diffMinutes > toleranceMinutes) return 'late';
+  return 'none';
+};

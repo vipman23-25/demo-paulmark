@@ -35,7 +35,7 @@ import { calculateEntitlement, calculateUsedLeave } from '@/lib/leaveUtils';
 import DailyBreakTracker from '@/components/employee/DailyBreakTracker';
 
 import { differenceInYears, differenceInMonths, differenceInDays, addYears, addMonths } from 'date-fns';
-import { calculateBreakMatrix, getPersonnelAssignedSlot } from '@/lib/breakMatrixUtils';
+import { calculateBreakMatrix, getPersonnelAssignedSlot, checkBreakViolation } from '@/lib/breakMatrixUtils';
 
 const DAYS = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 
@@ -719,9 +719,21 @@ const EmployeePanel = () => {
           if (!old) return old;
           return { ...old, breaks: [data, ...(old.breaks || [])] };
         });
+        
+        if (assignedBreakSlot) {
+          const violation = checkBreakViolation(data.break_start, assignedBreakSlot.timeRange);
+          if (violation === 'early') {
+            toast.warning(`Dikkat: Atanan mola saatinizden (${assignedBreakSlot.timeRange}) ERKEN çıktınız!`, { duration: 8000 });
+          } else if (violation === 'late') {
+            toast.warning(`Dikkat: Atanan mola saatinizden (${assignedBreakSlot.timeRange}) GEÇ çıktınız!`, { duration: 8000 });
+          } else {
+            toast.success('Mola başladı!');
+          }
+        } else {
+          toast.success('Mola başladı!');
+        }
       }
       queryClient.invalidateQueries({ queryKey: ['employee_dashboard', personnel?.id] });
-      toast.success('Mola başladı!');
     },
     onError: (err: any) => toast.error('Mola başlatılırken hata: ' + (err.message || 'Lütfen tekrar deneyin'))
   });
@@ -952,7 +964,7 @@ const EmployeePanel = () => {
                 <Button onClick={() => startBreakMutation.mutate()} disabled={isGeofenceBlockedForStart || startBreakMutation.isPending || loadingData} className={`w-full ${isGeofenceBlockedForStart ? 'opacity-50 cursor-not-allowed' : ''}`} variant="outline"><Coffee className="w-4 h-4 mr-2" /> Molaya Çıktım</Button>
               )}
 
-              <DailyBreakTracker todayBreaks={todayBreaks} activeBreak={activeBreak} limitMinutes={breakLimit} />
+              <DailyBreakTracker todayBreaks={todayBreaks} activeBreak={activeBreak} limitMinutes={breakLimit} assignedSlot={assignedBreakSlot} />
 
               {recentBreaks.length > 0 && (
                 <div className="mt-4 space-y-2">
@@ -1740,7 +1752,7 @@ const EmployeePanel = () => {
   );
 };
 
-const DailyBreakTracker = ({ todayBreaks, activeBreak, limitMinutes }: { todayBreaks: any[], activeBreak: any, limitMinutes: number }) => {
+const DailyBreakTracker = ({ todayBreaks, activeBreak, limitMinutes, assignedSlot }: { todayBreaks: any[], activeBreak: any, limitMinutes: number, assignedSlot?: any }) => {
   const [totalConsumedSeconds, setTotalConsumedSeconds] = useState(0);
 
   useEffect(() => {
@@ -1776,12 +1788,23 @@ const DailyBreakTracker = ({ todayBreaks, activeBreak, limitMinutes }: { todayBr
     return `${totalSeconds < 0 ? '-' : ''}${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  let violationBadge = null;
+  if (activeBreak && assignedSlot) {
+    const violation = checkBreakViolation(activeBreak.break_start, assignedSlot.timeRange);
+    if (violation === 'early') {
+      violationBadge = <div className="mt-2 text-xs font-bold text-orange-600 bg-orange-100 border border-orange-200 py-1.5 px-2 rounded">⚠️ Atanan saatinizden ({assignedSlot.timeRange}) erken çıktınız!</div>;
+    } else if (violation === 'late') {
+      violationBadge = <div className="mt-2 text-xs font-bold text-red-600 bg-red-100 border border-red-200 py-1.5 px-2 rounded">🚨 Atanan saatinizden ({assignedSlot.timeRange}) geç çıktınız!</div>;
+    }
+  }
+
   return (
     <div className={`mt-4 p-4 rounded-lg text-center border transition-colors ${isExceeded ? 'bg-destructive/10 border-destructive shadow-sm' : 'bg-secondary/20 border-transparent'}`}>
       <div className="grid grid-cols-2 gap-4">
         <div><p className="text-sm text-muted-foreground font-medium">Günlük Kullanım</p><p className="text-xl font-mono font-semibold">{formatTime(totalConsumedSeconds)}</p></div>
         <div><p className="text-sm text-muted-foreground font-medium">Kalan Süre</p><p className={`text-xl font-mono font-bold ${isExceeded ? 'text-destructive animate-pulse' : 'text-green-600 dark:text-green-500'}`}>{formatTime(remainingSeconds)}</p></div>
       </div>
+      {violationBadge}
       <p className="text-xs text-muted-foreground mt-3 pt-2 border-t">Günlük Kullanılabilir Mola Hakkı: <b>{limitMinutes} dakika</b></p>
     </div>
   );

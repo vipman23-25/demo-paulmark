@@ -17,7 +17,7 @@ import { format, startOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { Progress } from '@/components/ui/progress';
-import { calculateBreakMatrix, getPersonnelAssignedSlot } from '@/lib/breakMatrixUtils';
+import { calculateBreakMatrix, getPersonnelAssignedSlot, checkBreakViolation } from '@/lib/breakMatrixUtils';
 import ManagerQuickActions from '@/components/ManagerQuickActions';
 
 const SalesPerformanceCard = ({ salesTargets, personnel }: any) => {
@@ -790,11 +790,19 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
                         }
 
                         let hasStartedBreak = false;
+                        let violation: 'early' | 'late' | 'none' = 'none';
                         if (daysOffset === 0) {
                           const pObj = personnel.find((p: any) => `${p.first_name} ${p.last_name}`.trim() === person.name);
                           if (pObj) {
                             const pBreaks = breaks.filter((b: any) => b.personnel_id === pObj.id && (b.break_start || '').startsWith(targetDateStr));
-                            if (pBreaks.length > 0) hasStartedBreak = true;
+                            if (pBreaks.length > 0) {
+                              hasStartedBreak = true;
+                              if (assignedSlot) {
+                                // Sort to get the first break of the day
+                                const firstBreak = pBreaks.sort((a: any, b: any) => new Date(a.break_start).getTime() - new Date(b.break_start).getTime())[0];
+                                violation = checkBreakViolation(firstBreak.break_start, assignedSlot.timeRange);
+                              }
+                            }
                           }
                         }
 
@@ -813,6 +821,16 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
                               {assignedSlot && !hasStartedBreak && !isOff && (
                                 <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800/30 whitespace-nowrap">
                                   ({assignedSlot.timeRange} / Molaya çıkacak)
+                                </span>
+                              )}
+                              {hasStartedBreak && violation === 'early' && (
+                                <span className="text-[10px] font-bold text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-1.5 py-0.5 rounded border border-orange-200 dark:border-orange-800/50 whitespace-nowrap">
+                                  [Erken Çıktı]
+                                </span>
+                              )}
+                              {hasStartedBreak && violation === 'late' && (
+                                <span className="text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/50 whitespace-nowrap">
+                                  [Geç Çıktı]
                                 </span>
                               )}
                             </div>

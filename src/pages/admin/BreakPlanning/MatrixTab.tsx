@@ -11,7 +11,7 @@ import { AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { calculateBreakMatrix } from '@/lib/breakMatrixUtils';
+import { calculateBreakMatrix, checkBreakViolation } from '@/lib/breakMatrixUtils';
 
 export const MatrixTab = ({ settings }: { settings: any }) => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -30,6 +30,14 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
     queryKey: ['shift_schedules', weekStartStr],
     queryFn: async () => {
       const { data } = await supabase.from('shift_schedules').select('*').eq('week_start_date', weekStartStr);
+      return data || [];
+    }
+  });
+
+  const { data: breakRecords } = useQuery({
+    queryKey: ['matrix_break_records', selectedDate],
+    queryFn: async () => {
+      const { data } = await supabase.from('break_records').select('*').gte('break_start', selectedDate).lte('break_start', selectedDate + 'T23:59:59Z');
       return data || [];
     }
   });
@@ -96,9 +104,35 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
                         <TableCell className="font-medium whitespace-nowrap">{slot.timeRange}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {onBreak.length > 0 ? onBreak.map((p: any) => (
-                              <Badge key={p.id} variant="secondary" className="text-xs">{p.first_name} {p.last_name}</Badge>
-                            )) : <span className="text-xs text-muted-foreground">-</span>}
+                            {onBreak.length > 0 ? onBreak.map((p: any) => {
+                              let badgeVariant: any = "secondary";
+                              let violationIcon = null;
+                              let extraClass = "";
+                              
+                              if (breakRecords) {
+                                const pBreaks = breakRecords.filter((b: any) => b.personnel_id === p.id);
+                                if (pBreaks.length > 0) {
+                                  const firstBreak = pBreaks.sort((a: any, b: any) => new Date(a.break_start).getTime() - new Date(b.break_start).getTime())[0];
+                                  const violation = checkBreakViolation(firstBreak.break_start, slot.timeRange);
+                                  if (violation === 'early') {
+                                    violationIcon = <span className="ml-1 text-[10px] font-bold">[Erken]</span>;
+                                    badgeVariant = "outline";
+                                    extraClass = "border-orange-300 bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:border-orange-800/50 dark:text-orange-400";
+                                  } else if (violation === 'late') {
+                                    violationIcon = <span className="ml-1 text-[10px] font-bold">[Geç]</span>;
+                                    badgeVariant = "outline";
+                                    extraClass = "border-red-300 bg-red-50 text-red-700 dark:bg-red-950/30 dark:border-red-800/50 dark:text-red-400";
+                                  }
+                                }
+                              }
+                              
+                              return (
+                                <Badge key={p.id} variant={badgeVariant} className={`text-xs ${extraClass}`}>
+                                  {p.first_name} {p.last_name}
+                                  {violationIcon}
+                                </Badge>
+                              );
+                            }) : <span className="text-xs text-muted-foreground">-</span>}
                           </div>
                         </TableCell>
                         <TableCell>
