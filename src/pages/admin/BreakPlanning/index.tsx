@@ -25,15 +25,11 @@ const DEFAULT_SETTINGS = {
 export default function BreakPlanning() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('matrix');
-  const [localSettings, setLocalSettings] = useState<any>(null);
-
   const { data: dbSettings, isLoading } = useQuery({
     queryKey: ['break_matrix_settings'],
     queryFn: async () => {
       const { data } = await supabase.from('system_settings' as any).select('*').eq('setting_key', 'break_matrix').maybeSingle();
-      const st = data?.setting_value || DEFAULT_SETTINGS;
-      setLocalSettings(st);
-      return st;
+      return data?.setting_value || DEFAULT_SETTINGS;
     }
   });
 
@@ -48,14 +44,27 @@ export default function BreakPlanning() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      toast.success('Mola planlama ayarları kaydedildi');
+    onMutate: async (newSettings: any) => {
+      await queryClient.cancelQueries({ queryKey: ['break_matrix_settings'] });
+      const previousSettings = queryClient.getQueryData(['break_matrix_settings']);
+      queryClient.setQueryData(['break_matrix_settings'], newSettings);
+      return { previousSettings };
+    },
+    onError: (err: any, newSettings, context) => {
+      toast.error('Hata: ' + err.message);
+      if (context?.previousSettings) {
+        queryClient.setQueryData(['break_matrix_settings'], context.previousSettings);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['break_matrix_settings'] });
     },
-    onError: (err: any) => toast.error('Hata: ' + err.message)
+    onSuccess: () => {
+      toast.success('Mola planlama ayarları kaydedildi');
+    }
   });
 
-  if (isLoading || !localSettings) return <div className="p-8 text-center">Yükleniyor...</div>;
+  if (isLoading || !dbSettings) return <div className="p-8 text-center">Yükleniyor...</div>;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -69,13 +78,13 @@ export default function BreakPlanning() {
           <TabsTrigger value="settings">Ayarlar ve Kurallar</TabsTrigger>
         </TabsList>
         <TabsContent value="matrix">
-          <MatrixTab settings={localSettings} />
+          <MatrixTab settings={dbSettings} />
         </TabsContent>
         <TabsContent value="settings">
           <SettingsTab 
-            settings={localSettings} 
-            setSettings={setLocalSettings} 
-            handleSave={(newSettings: any) => saveMutation.mutate(newSettings || localSettings)} 
+            settings={dbSettings} 
+            setSettings={(s: any) => queryClient.setQueryData(['break_matrix_settings'], s)} 
+            handleSave={(newSettings: any) => saveMutation.mutate(newSettings || dbSettings)} 
             isSaving={saveMutation.isPending} 
           />
         </TabsContent>
