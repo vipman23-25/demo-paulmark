@@ -95,7 +95,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 2,
       refetchOnWindowFocus: true, // Her zaman sekme odaklandığında güncel veriyi çeksin
-      staleTime: 1000 * 60 * 1, // 1 dakika boyunca veriyi taze kabul et (spam'i engelle)
+      staleTime: 1000 * 60 * 5, // 5 dakika boyunca veriyi taze kabul et (spam'i engelle, realtime ile tetiklenecek)
       gcTime: 1000 * 60 * 5, // 5 dakika
     },
   },

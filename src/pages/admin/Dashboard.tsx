@@ -195,8 +195,11 @@ const Dashboard = ({ isManagerPanel = false }: { isManagerPanel?: boolean }) => 
 
   useEffect(() => {
     const channel = supabase
-      .channel('dashboard_realtime_breaks')
+      .channel('dashboard_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'break_records' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin_dashboard_data'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel_movements' }, () => {
         queryClient.invalidateQueries({ queryKey: ['admin_dashboard_data'] });
       })
       .subscribe();
@@ -299,9 +302,9 @@ const Dashboard = ({ isManagerPanel = false }: { isManagerPanel?: boolean }) => 
       ] = await Promise.all([
         supabase.from('personnel').select('*').eq('is_active', true),
         supabase.from('break_records').select('*').gte('break_start', todayIsoStr),
-        supabase.from('personnel_movements').select('*').gte('end_date', ninetyDaysAgoStr),
-        supabase.from('weekly_day_off').select('*').gte('created_at', ninetyDaysAgoStr),
-        supabase.from('cargo_shipments').select('*').gte('arrival_date', thirtyDaysAgoStr),
+        supabase.from('personnel_movements').select('*').or(`end_date.is.null,end_date.gte.${todayIsoStr}`),
+        supabase.from('weekly_day_off').select('*').gte('created_at', weekStartStr),
+        supabase.from('cargo_shipments').select('*').gte('arrival_date', weekStartStr),
         supabase.from('shift_schedules').select('*').eq('week_start_date', weekStartStr),
         supabase.from('reminders').select('*, responses:reminder_responses(*)').eq('is_active', true),
         supabase.from('sales_targets' as any).select('*').gte('target_month', format(new Date(Date.now() - 90*24*60*60*1000), 'yyyy-MM')),

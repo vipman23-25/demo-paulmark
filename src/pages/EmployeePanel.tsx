@@ -161,6 +161,23 @@ const EmployeePanel = () => {
     }
   }, [personnel?.id]);
 
+  useEffect(() => {
+    if (!personnel?.id) return;
+    const channel = supabase
+      .channel(`employee_realtime_${personnel.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'break_records' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['employee_dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['employee_break_matrix'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel_movements' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['employee_dashboard'] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [personnel?.id, queryClient]);
+
   if (isPersonnelError) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -353,7 +370,7 @@ const EmployeePanel = () => {
          { data: genderRules }
       ] = await Promise.all([
          supabase.from('break_records' as any).select('*, personnel(first_name, last_name, department)').gte('break_start', todayIsoDate),
-         coworkerIds.length > 0 ? supabase.from('personnel_movements' as any).select('*').in('personnel_id', coworkerIds).gte('end_date', todayIsoDate).order('start_date', { ascending: false }) : { data: [] },
+         coworkerIds.length > 0 ? supabase.from('personnel_movements' as any).select('*').in('personnel_id', coworkerIds).or(`end_date.is.null,end_date.gte.${todayIsoDate}`).order('start_date', { ascending: false }) : { data: [] },
          coworkerIds.length > 0 ? supabase.from('weekly_day_off' as any).select('*').in('personnel_id', coworkerIds) : { data: [] },
          supabase.from('shift_gender_rules' as any).select('*')
       ]);
