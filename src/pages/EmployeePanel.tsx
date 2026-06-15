@@ -1862,21 +1862,14 @@ const ColleagueShiftPanel = ({ dashboardData, personnel }: { dashboardData: any,
   const getShiftStatus = (person: any, dateOffset: 0 | 1 = 0) => {
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + dateOffset);
-    const targetStr = targetDate.toISOString().split('T')[0];
+    // Güvenli tarih string'i oluşturma (Local timezone offset ile)
+    const tzOffset = targetDate.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(targetDate.getTime() - tzOffset)).toISOString().slice(0, 10);
+    const targetStr = localISOTime;
     const dayName = daysTr[targetDate.getDay()];
     const fullName = `${person.first_name} ${person.last_name}`.trim();
 
-    const activeMovement = dashboardData.colleagueMovements?.find((m: any) => {
-      if (m.personnel_id !== person.id) return false;
-      return m.start_date <= targetStr && (!m.end_date || m.end_date >= targetStr);
-    });
-
-    if (activeMovement) {
-      if (activeMovement.movement_type === 'Mutfak') return { title: 'Mutfak', statusLabel: 'Görevde', statusColor: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400' };
-      if (activeMovement.movement_type === 'Depo') return { title: 'Depo', statusLabel: 'Görevde', statusColor: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400' };
-      return { title: activeMovement.movement_type || 'Görevde', statusLabel: 'Görevde', statusColor: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400' };
-    }
-
+    // 1. Vardiya bilgisini çek
     const row = dashboardData.weeklySchedule.find((r: any) => r['Ad Soyad']?.toString().trim() === fullName);
     const shiftRaw = row ? (row[dayName] || '').toString().trim() : '';
 
@@ -1884,7 +1877,9 @@ const ColleagueShiftPanel = ({ dashboardData, personnel }: { dashboardData: any,
       return {
         title: 'İzinli (Off) / Belirsiz',
         statusLabel: 'İzinli',
-        statusColor: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800'
+        statusColor: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800',
+        hasMutfak: false,
+        hasDepo: false
       };
     }
 
@@ -1906,7 +1901,9 @@ const ColleagueShiftPanel = ({ dashboardData, personnel }: { dashboardData: any,
       return {
         title: 'Haftalık İzin',
         statusLabel: 'İzinli',
-        statusColor: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400'
+        statusColor: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400',
+        hasMutfak: false,
+        hasDepo: false
       };
     }
 
@@ -1927,13 +1924,32 @@ const ColleagueShiftPanel = ({ dashboardData, personnel }: { dashboardData: any,
       }
     }
 
+    // 2. Anlık Durumu (Görev/Mola) Belirle
     let statusLabel = 'Mağazada';
     let statusColor = 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400';
+    let activeTaskInfo = '';
 
     if (dateOffset === 0) {
+      const activeMovement = dashboardData.colleagueMovements?.find((m: any) => {
+        if (m.personnel_id !== person.id) return false;
+        return m.start_date <= targetStr && (!m.end_date || m.end_date >= targetStr);
+      });
+
       const activeBreak = dashboardData.colleagueBreaks?.find((b: any) => b.personnel_id === person.id && !b.break_end);
-      if (activeBreak) {
+
+      if (activeMovement) {
+        statusLabel = 'Görevde';
+        activeTaskInfo = ` (Görev: ${activeMovement.movement_type})`;
+        if (activeMovement.movement_type === 'Mutfak') {
+          statusColor = 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400';
+        } else if (activeMovement.movement_type === 'Depo') {
+          statusColor = 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400';
+        } else {
+          statusColor = 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400';
+        }
+      } else if (activeBreak) {
         statusLabel = 'Molada';
+        activeTaskInfo = ' (Molada)';
         statusColor = 'bg-blue-100 text-blue-700 border-blue-200 animate-pulse dark:bg-blue-900/30 dark:text-blue-400';
       } else {
         if (shiftType === '') {
@@ -1961,6 +1977,11 @@ const ColleagueShiftPanel = ({ dashboardData, personnel }: { dashboardData: any,
     } else {
       statusLabel = 'Yarınki Plan';
       statusColor = 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400';
+    }
+
+    // Vardiya bilgisi ile görev durumunu birleştir
+    if (activeTaskInfo) {
+      title = `${title}${activeTaskInfo}`;
     }
 
     return { title, statusLabel, statusColor, hasMutfak, hasDepo };
