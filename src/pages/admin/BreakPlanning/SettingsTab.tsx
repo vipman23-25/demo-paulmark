@@ -47,13 +47,18 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
   });
 
   // Group personnel by department
+  const [searchTerm, setSearchTerm] = useState('');
+  
   const groupedPersonnel = personnelData.reduce((acc: any, p: any) => {
     const dept = p.department?.trim() || 'Diğer';
     if (!acc[dept]) acc[dept] = [];
     acc[dept].push(p);
     return acc;
   }, {});
-  const sortedDepartments = Object.keys(groupedPersonnel).sort();
+  
+  const sortedDepartments = Object.keys(groupedPersonnel)
+    .sort()
+    .filter(d => d.toLowerCase().includes(searchTerm.toLowerCase()) || groupedPersonnel[d].some((p: any) => `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())));
 
   const addSlot = () => {
     if (!newSlot) return;
@@ -169,13 +174,22 @@ export const SettingsTab = ({ settings, setSettings, handleSave, isSaving }: any
             </div>
             
             <div className="space-y-2">
-              <Label>Dahil Edilecek Personelleri / Reyonları Seçin</Label>
+              <div className="flex justify-between items-center">
+                <Label>Dahil Edilecek Personelleri / Reyonları Seçin</Label>
+                <Input 
+                  placeholder="Reyon veya personel ara..." 
+                  className="w-[250px] h-8 text-sm" 
+                  value={searchTerm} 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                />
+              </div>
               {isLoadingPersonnel ? (
                 <p className="text-sm text-muted-foreground">Personeller yükleniyor...</p>
-              ) : sortedDepartments.length === 0 ? (
+              ) : Object.keys(groupedPersonnel).length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sistemde aktif personel bulunamadı.</p>
               ) : (
                 <div className="max-h-[300px] overflow-y-auto border rounded-md p-4 bg-background space-y-6">
+                  {sortedDepartments.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Arama kriterinize uygun sonuç bulunamadı.</p>}
                   {sortedDepartments.map((dept) => {
                     const deptPersonnel = groupedPersonnel[dept];
                     const deptPersonnelIds = deptPersonnel.map((p: any) => p.id);
