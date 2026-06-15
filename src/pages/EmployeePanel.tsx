@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { MapPin, CalendarDays, Umbrella, Coffee, ImagePlus, UserCheck, Timer, Calendar, Info, Clock, Activity, Target, LogOut, Bell, Package, Plus, Minus, Truck, Trash2, Settings, RefreshCw, Smartphone } from "lucide-react";
-import { format } from 'date-fns';
+import { format, startOfWeek } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { requestNotificationPermission, subscribeUserToPush } from '@/utils/pushSubscription';
 import { calculateDistance } from '@/lib/geoUtils';
@@ -33,7 +33,7 @@ const AdminDashboard = retryLazy(() => import('@/pages/admin/Dashboard'));
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calculateEntitlement, calculateUsedLeave } from '@/lib/leaveUtils';
 import DailyBreakTracker from '@/components/employee/DailyBreakTracker';
-import ColleagueShiftPanel from '@/components/employee/ColleagueShiftPanel';
+
 import { differenceInYears, differenceInMonths, differenceInDays, addYears, addMonths } from 'date-fns';
 import { calculateBreakMatrix, getPersonnelAssignedSlot } from '@/lib/breakMatrixUtils';
 
