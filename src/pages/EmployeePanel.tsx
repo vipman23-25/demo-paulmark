@@ -1914,9 +1914,6 @@ const ColleagueShiftPanel = ({ dashboardData, personnel }: { dashboardData: any,
     const hasMutfak = shiftRaw.toLowerCase().includes('mutfak') || shiftRaw.toUpperCase().includes('+M');
     const hasDepo = shiftRaw.toLowerCase().includes('depo') || shiftRaw.toUpperCase().includes('+D');
 
-    if (hasMutfak && !title.toLowerCase().includes('mutfak')) title += ' + Mutfak';
-    if (hasDepo && !title.toLowerCase().includes('depo')) title += ' + Depo';
-
     if (shiftRaw.includes('+')) {
       const custom = shiftRaw.substring(shiftRaw.indexOf('+'));
       if (!custom.toLowerCase().includes('mutfak') && !custom.toLowerCase().includes('depo')) {
