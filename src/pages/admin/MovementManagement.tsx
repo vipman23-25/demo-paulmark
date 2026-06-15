@@ -182,6 +182,7 @@ const MovementManagement = () => {
     import('xlsx').then(XLSX => {
       const data = filteredMovements.map(m => ({
         'Personel': m.personnel ? `${m.personnel.first_name} ${m.personnel.last_name}` : 'Bilinmeyen',
+        'İşten Çıkış Tarihi': m.personnel?.end_date ? format(new Date(m.personnel.end_date), 'dd.MM.yyyy', { locale: tr }) : '-',
         'Hareket Türü': (() => { const typeObj = movementTypes.find((mt: any) => mt.code === m.movement_type); return typeObj ? `[${typeObj.code}] ${typeObj.label}` : m.movement_type; })(),
         'Başlangıç': m.start_date ? format(new Date(m.start_date), 'dd.MM.yyyy', { locale: tr }) : '-',
         'Bitiş': m.end_date ? format(new Date(m.end_date), 'dd.MM.yyyy', { locale: tr }) : '-',
@@ -592,6 +593,7 @@ const MovementManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Personel</TableHead>
+                    <TableHead>Çıkış Tarihi</TableHead>
                     <TableHead>Tür</TableHead>
                     <TableHead>Başlangıç</TableHead>
                     <TableHead>Bitiş</TableHead>
@@ -602,12 +604,13 @@ const MovementManagement = () => {
                 </TableHeader>
                 <TableBody>
                   {mLoading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground animate-pulse">Hareketler yükleniyor...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground animate-pulse">Hareketler yükleniyor...</TableCell></TableRow>
                   ) : filteredMovements.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Kayıt bulunamadı</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Kayıt bulunamadı</TableCell></TableRow>
                   ) : filteredMovements.map((m: any) => (
                     <TableRow key={m.id}>
                       <TableCell className="font-medium">{m.personnel ? `${m.personnel.first_name} ${m.personnel.last_name}` : 'Bilinmeyen'}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{m.personnel?.end_date ? format(new Date(m.personnel.end_date), 'dd.MM.yyyy', { locale: tr }) : '-'}</TableCell>
                       <TableCell>
                         {(() => {
                            const typeObj = movementTypes.find((mt: any) => mt.code === m.movement_type);
