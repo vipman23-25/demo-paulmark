@@ -355,7 +355,7 @@ const EmployeePanel = () => {
           .eq('personnel_id', personnel.id)
           .order('response_date', { ascending: false }),
         supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'general').single(),
-        supabase.from('personnel' as any).select('id, first_name, last_name, department, is_active, role, module_visibility'),
+        supabase.from('personnel' as any).select('id, first_name, last_name, department, is_active, module_visibility'),
         supabase.from('shift_schedules' as any).select('*').eq('week_start_date', weekStartStr)
       ]);
       
