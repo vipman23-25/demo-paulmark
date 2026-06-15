@@ -7,6 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Clock, MapPin, Zap, Package, CalendarDays, Settings, Bell, Trash2, ToggleRight, ToggleLeft, Edit2, Send, Target, CheckCircle2, Download } from 'lucide-react';
+import { getSystemLogs } from '@/lib/systemLogs';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import SalesTargets from './SalesTargets';
+import { MatrixTab } from '@/pages/admin/BreakPlanning/MatrixTab';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -486,7 +490,7 @@ const Dashboard = ({ isManagerPanel = false }: { isManagerPanel?: boolean }) => 
 
       {visibility.showTodayShift && <ShiftCard weeklySchedule={weeklySchedule} breaks={breaks} movements={movements} personnel={activePersonnel} daysOffset={0} />}
       {visibility.showTomorrowShift && <ShiftCard weeklySchedule={weeklySchedule} breaks={breaks} movements={movements} personnel={activePersonnel} daysOffset={1} />}
-      {visibility.showDailyBreaks && <DailyBreaksCard breaks={breaks} personnel={activePersonnel} weeklySchedule={weeklySchedule} />}
+      {visibility.showDailyBreaks && <DashboardMatrixWrapper />}
       {visibility.showMovements && <MovementsCard movements={movements} personnel={activePersonnel} />}
       {visibility.showCargoStatus && <CargoStatusCard shipments={shipments} />}
       {visibility.showSalesPerformance && <SalesPerformanceCard salesTargets={salesTargets} personnel={personnel} />}
@@ -1109,73 +1113,25 @@ const MovementsCard = ({ movements, personnel }: any) => {
   );
 };
 
-const DailyBreaksCard = ({ breaks, personnel, weeklySchedule }: any) => {
-  const getPersonnelName = (id: string, dept=false) => {
-    const p = personnel.find((p: any) => p.id === id);
-    if (!p) return 'Bilinmiyor';
-    return dept ? `${p.first_name} ${p.last_name} (${p.department})` : `${p.first_name} ${p.last_name}`;
-  };
+const DashboardMatrixWrapper = () => {
+  const { data: dbSettings } = useQuery({
+    queryKey: ['system_settings_break_planning'],
+    queryFn: async () => {
+      const { data } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_planning').maybeSingle();
+      return data?.setting_value || {
+        slots: [],
+        departmentGroups: [],
+        rules: []
+      };
+    }
+  });
 
-  const getShift = (id: string) => {
-    const p = personnel.find((p: any) => p.id === id);
-    if (!p || !weeklySchedule) return null;
-    const name = `${p.first_name} ${p.last_name}`.trim();
-    const row = weeklySchedule.find((r: any) => r['Ad Soyad'] === name);
-    if (!row) return null;
-    const daysTr = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-    const todayName = daysTr[new Date().getDay()];
-    return row[todayName];
-  };
+  if (!dbSettings) return <div className="p-4 text-center animate-pulse">Mola matrisi yükleniyor...</div>;
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayBreaks = breaks.filter((b: any) => (b.break_start || '').startsWith(todayStr) && b.break_end !== null)
-    .sort((a: any, b: any) => new Date(b.break_start).getTime() - new Date(a.break_start).getTime());
-
-  const formatTime = (iso: string) => format(new Date(iso), 'HH:mm', { locale: tr });
-  
-  const limit = 60; // 60 minutes limit
-  
   return (
-    <Card className="glass-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Bugün Tamamlanan ve İhlal Molaları
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-          {todayBreaks.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Bugün tamamlanan mola kaydı yok</p>
-          ) : (
-            todayBreaks.map((b: any) => {
-              const start = new Date(b.break_start);
-              const end = new Date(b.break_end);
-              const dur = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
-              const isViolation = dur > limit;
-              
-              return (
-                <div key={b.id} className={`flex items-center justify-between p-2 rounded-lg border ${isViolation ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/30 border-border/50'}`}>
-                  <div>
-                    <p className={`font-medium text-sm ${isViolation ? 'text-destructive font-semibold' : ''}`}>
-                      {getPersonnelName(b.personnel_id)}
-                      {(() => {
-                        const shift = getShift(b.personnel_id);
-                        return shift ? <span className="text-xs text-muted-foreground ml-1">({shift})</span> : null;
-                      })()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{formatTime(b.break_start)} - {formatTime(b.break_end)}</p>
-                  </div>
-                  <div className={`text-xs font-semibold px-2 py-1 rounded ${isViolation ? 'bg-destructive/20 text-destructive' : 'bg-secondary/10 text-secondary'}`}>
-                    {dur} dk {isViolation && ' (İhlal)'}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="mt-6 mb-6">
+      <MatrixTab settings={dbSettings} />
+    </div>
   );
 };
 
