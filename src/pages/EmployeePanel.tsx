@@ -35,6 +35,7 @@ import { calculateEntitlement, calculateUsedLeave } from '@/lib/leaveUtils';
 import DailyBreakTracker from '@/components/employee/DailyBreakTracker';
 import ColleagueShiftPanel from '@/components/employee/ColleagueShiftPanel';
 import { differenceInYears, differenceInMonths, differenceInDays, addYears, addMonths } from 'date-fns';
+import { calculateBreakMatrix, getPersonnelAssignedSlot } from '@/lib/breakMatrixUtils';
 
 const DAYS = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 
@@ -455,6 +456,25 @@ const EmployeePanel = () => {
       return resData;
     },
     enabled: !!personnel?.id
+  });
+
+  const targetDateStr = format(new Date(), 'yyyy-MM-dd');
+  const weekStartStr = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+  const { data: assignedBreakSlot } = useQuery({
+    queryKey: ['employee_break_matrix', personnel?.id, targetDateStr],
+    enabled: !!personnel?.id,
+    queryFn: async () => {
+      const { data: sData } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_planning').maybeSingle();
+      const settings = sData?.setting_value || { slots: [], departmentGroups: [], rules: [] };
+      
+      const { data: shiftsData } = await supabase.from('shift_schedules').select('*').eq('week_start_date', weekStartStr);
+      const { data: pData } = await supabase.from('personnel').select('*').eq('is_active', true);
+      
+      const matrix = calculateBreakMatrix(pData || [], shiftsData || [], settings, targetDateStr);
+      if (!matrix) return null;
+      return getPersonnelAssignedSlot(matrix, personnel.id);
+    }
   });
 
   const submitSurveyResponseMutation = useMutation({
@@ -917,6 +937,12 @@ const EmployeePanel = () => {
               <CardDescription>Mola durumunuzu takip edin</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {assignedBreakSlot && !activeBreak && todayBreaks.length === 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-3 rounded-md text-sm border border-blue-200 dark:border-blue-800 flex items-center justify-between">
+                  <span><strong>Atanmış Mola Saatiniz:</strong></span>
+                  <span className="font-bold">{assignedBreakSlot.timeRange}</span>
+                </div>
+              )}
               {activeBreak ? (
                 <>
                   <div className="p-4 bg-warning/10 rounded-lg text-center"><p className="text-lg font-semibold text-foreground">Moladasınız</p></div>

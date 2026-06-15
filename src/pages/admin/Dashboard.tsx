@@ -13,10 +13,11 @@ import SalesTargets from './SalesTargets';
 import { MatrixTab } from '@/pages/admin/BreakPlanning/MatrixTab';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, startOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { Progress } from '@/components/ui/progress';
+import { calculateBreakMatrix, getPersonnelAssignedSlot } from '@/lib/breakMatrixUtils';
 import ManagerQuickActions from '@/components/ManagerQuickActions';
 
 const SalesPerformanceCard = ({ salesTargets, personnel }: any) => {
@@ -541,6 +542,31 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
   const targetDate = new Date();
   targetDate.setDate(targetDate.getDate() + daysOffset);
   const targetName = daysTr[targetDate.getDay()];
+  const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+  const weekStartStr = format(startOfWeek(targetDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+  const { data: matrixSettings } = useQuery({
+    queryKey: ['system_settings_break_planning'],
+    queryFn: async () => {
+      const { data } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_planning').maybeSingle();
+      return data?.setting_value || { slots: [], departmentGroups: [], rules: [] };
+    },
+    enabled: daysOffset === 0
+  });
+
+  const { data: shiftsData } = useQuery({
+    queryKey: ['shift_schedules', weekStartStr],
+    queryFn: async () => {
+      const { data } = await supabase.from('shift_schedules').select('*').eq('week_start_date', weekStartStr);
+      return data || [];
+    },
+    enabled: daysOffset === 0
+  });
+
+  const matrix = useMemo(() => {
+    if (daysOffset !== 0 || !matrixSettings || !shiftsData || !personnel) return null;
+    return calculateBreakMatrix(personnel, shiftsData, matrixSettings, targetDateStr);
+  }, [daysOffset, matrixSettings, shiftsData, personnel, targetDateStr]);
 
   const formatDisplayName = (fullString: string) => {
     const match = fullString.match(/^(.*?)\s*(\(.*?\))?$/);
@@ -626,7 +652,7 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
         }
     });
 
-    const grouped: Record<string, Record<string, string[]>> = {};
+    const grouped: Record<string, Record<string, {name: string, val: string}[]>> = {};
 
     Object.entries(shifts).forEach(([adSoyad, data]) => {
         if (!data.shiftVal && !data.hasDepo && !data.hasMutfak) return;
@@ -638,17 +664,10 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
         if (!grouped[finalReyon]) grouped[finalReyon] = { 'Sabah': [], 'Akşam': [], 'İzinli': [], 'Diğer': [], 'Ek Görev (Sınıflandırılmamış Shift)': [] };
         if (!grouped[finalReyon][cat]) grouped[finalReyon][cat] = [];
         
-        let displayStr = `${adSoyad} (${data.shiftVal || 'Belirtilmedi'})`;
-        if (cat === 'Ek Görev (Sınıflandırılmamış Shift)') {
-             displayStr = adSoyad;
-             if (data.hasMutfak) displayStr += ' +M';
-             if (data.hasDepo) displayStr += ' +D';
-        }
-        
-        grouped[finalReyon][cat].push(displayStr);
+        grouped[finalReyon][cat].push({ name: adSoyad, val: data.shiftVal });
     });
 
-  const getBreakBadge = (pString: string) => {
+  const renderBreakStatus = (pString: string) => {
     if (daysOffset !== 0) return null;
     if (!personnel || !breaks) return null;
     
@@ -718,7 +737,6 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
 
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + daysOffset);
-    // Use string comparison for dates (YYYY-MM-DD) to be safe against timezones
     const targetStr = targetDate.toISOString().split('T')[0];
 
     const activeMovement = movements.find((m: any) => {
@@ -751,74 +769,64 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
             <h3 className="text-sm font-bold text-foreground mb-2 border-b border-border/50 pb-1">🛍️ {reyon}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               
-              {cats['Sabah'] && cats['Sabah'].length > 0 && (
-                <div className="bg-blue-50/40 dark:bg-blue-900/10 p-2 rounded border border-blue-100/50 dark:border-blue-900/30">
-                  <h4 className="font-semibold text-xs text-blue-700 dark:text-blue-400 mb-1.5 flex items-center gap-1">☀️ Sabah</h4>
-                  <ul className="text-[13px] space-y-1">
-                    {cats['Sabah'].map((p, i) => (
-                      <li key={i} className="text-foreground flex items-center justify-between border-b border-border/30 pb-0.5 last:border-0 last:pb-0">
-                        <span className="truncate pr-1 leading-tight flex items-center gap-1">{formatDisplayName(p)} {getMovementBadge(p)}</span>
-                        {getBreakBadge(p)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {['Sabah', 'Akşam', 'İzinli', 'Diğer', 'Ek Görev (Sınıflandırılmamış Shift)'].map((cat) => {
+                const list = cats[cat] || [];
+                if (list.length === 0) return null;
+                const emoji = cat === 'Sabah' ? '☀️' : cat === 'Akşam' ? '🌙' : cat === 'İzinli' ? '⛔' : cat === 'Diğer' ? '📋' : '✨';
+                
+                return (
+                  <div key={cat} className="bg-muted/30 p-2 rounded border border-border/50">
+                    <h4 className="font-semibold text-xs mb-1.5 flex items-center gap-1">{emoji} {cat}</h4>
+                    <div className="space-y-1">
+                      {list.map((person: any, idx: number) => {
+                        const isOff = person.val === '-' || person.val.toUpperCase() === 'OFF' || person.val.toUpperCase() === 'IZIN';
+                        
+                        let assignedSlot = null;
+                        if (daysOffset === 0 && matrix) {
+                          const pObj = personnel.find((p: any) => `${p.first_name} ${p.last_name}`.trim() === person.name);
+                          if (pObj) {
+                            assignedSlot = getPersonnelAssignedSlot(matrix, pObj.id);
+                          }
+                        }
 
-              {cats['Akşam'] && cats['Akşam'].length > 0 && (
-                <div className="bg-indigo-50/40 dark:bg-indigo-900/10 p-2 rounded border border-indigo-100/50 dark:border-indigo-900/30">
-                  <h4 className="font-semibold text-xs text-indigo-700 dark:text-indigo-400 mb-1.5 flex items-center gap-1">🌙 Akşam</h4>
-                  <ul className="text-[13px] space-y-1">
-                    {cats['Akşam'].map((p, i) => (
-                      <li key={i} className="text-foreground flex items-center justify-between border-b border-border/30 pb-0.5 last:border-0 last:pb-0">
-                        <span className="truncate pr-1 leading-tight flex items-center gap-1">{formatDisplayName(p)} {getMovementBadge(p)}</span>
-                        {getBreakBadge(p)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                        let hasStartedBreak = false;
+                        if (daysOffset === 0) {
+                          const pObj = personnel.find((p: any) => `${p.first_name} ${p.last_name}`.trim() === person.name);
+                          if (pObj) {
+                            const pBreaks = breaks.filter((b: any) => b.personnel_id === pObj.id && (b.break_start || '').startsWith(targetDateStr));
+                            if (pBreaks.length > 0) hasStartedBreak = true;
+                          }
+                        }
 
-              {cats['İzinli'] && cats['İzinli'].length > 0 && (
-                <div className="bg-orange-50/40 dark:bg-orange-900/10 p-2 rounded border border-orange-100/50 dark:border-orange-900/30">
-                  <h4 className="font-semibold text-xs text-orange-700 dark:text-orange-400 mb-1.5 flex items-center gap-1">⛔ İzinli</h4>
-                  <ul className="text-[13px] space-y-1">
-                    {cats['İzinli'].map((p, i) => (
-                      <li key={i} className="text-foreground flex items-center justify-between border-b border-border/30 pb-0.5 last:border-0 last:pb-0">
-                        <span className="truncate pr-1 leading-tight flex items-center gap-1">{formatDisplayName(p)} {getMovementBadge(p)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {cats['Diğer'] && cats['Diğer'].length > 0 && (
-                <div className="bg-gray-50/40 dark:bg-gray-900/10 p-2 rounded border border-gray-200/50 dark:border-gray-800/30">
-                  <h4 className="font-semibold text-xs text-gray-700 dark:text-gray-400 mb-1.5 flex items-center gap-1">📋 Diğer</h4>
-                  <ul className="text-[13px] space-y-1">
-                    {cats['Diğer'].map((p, i) => (
-                      <li key={i} className="text-foreground flex items-center justify-between border-b border-border/30 pb-0.5 last:border-0 last:pb-0">
-                        <span className="truncate pr-1 leading-tight flex items-center gap-1">{formatDisplayName(p)} {getMovementBadge(p)}</span>
-                        {getBreakBadge(p)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {cats['Ek Görev (Sınıflandırılmamış Shift)'] && cats['Ek Görev (Sınıflandırılmamış Shift)'].length > 0 && (
-                <div className="bg-purple-50/40 dark:bg-purple-900/10 p-2 rounded border border-purple-100/50 dark:border-purple-900/30">
-                  <h4 className="font-semibold text-xs text-purple-700 dark:text-purple-400 mb-1.5 flex items-center gap-1">✨ Ek Görev</h4>
-                  <ul className="text-[13px] space-y-1">
-                    {cats['Ek Görev (Sınıflandırılmamış Shift)'].map((p, i) => (
-                      <li key={i} className="text-foreground flex items-center justify-between border-b border-border/30 pb-0.5 last:border-0 last:pb-0">
-                        <span className="truncate pr-1 leading-tight flex items-center gap-1">{formatDisplayName(p)} {getMovementBadge(p)}</span>
-                        {getBreakBadge(p)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                        return (
+                          <div key={idx} className={`p-2 rounded flex justify-between items-center text-xs border ${isOff ? 'bg-red-50/50 border-red-100 dark:bg-red-950/20 dark:border-red-900/30' : 'bg-background border-border/50'}`}>
+                            <div className="flex flex-col gap-0.5 max-w-[80%]">
+                              <span className={`font-semibold truncate flex items-center gap-1 ${isOff ? 'text-red-700 dark:text-red-400 line-through opacity-70' : 'text-foreground'}`} title={person.name}>
+                                {formatDisplayName(person.name)} {getMovementBadge(person.name)}
+                              </span>
+                              {!isOff && (
+                                <span className="text-[10px] text-muted-foreground truncate" title={person.val}>
+                                  {person.val}
+                                </span>
+                              )}
+                              {assignedSlot && !hasStartedBreak && !isOff && (
+                                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                                  ({assignedSlot.timeRange} / Molaya çıkacak)
+                                </span>
+                              )}
+                            </div>
+                            {!isOff && daysOffset === 0 && (
+                              <div className="shrink-0 flex items-center justify-end">
+                                {renderBreakStatus(person.name)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
 
             </div>
           </div>
