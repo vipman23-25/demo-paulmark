@@ -226,7 +226,7 @@ const OvertimeManagement = () => {
     const credit = pRecords.filter((r: any) => (r.record_type || '').toLowerCase().includes('alacak') || (r.record_type || '').toLowerCase().includes('kullanım'))
       .reduce((s: any, r: any) => s + Number(r.hours), 0);
     return { ...p, overtime, credit, balance: overtime - credit };
-  }).filter(p => p.overtime > 0 || p.credit > 0);
+  }).filter(p => p.balance !== 0);
 
   const formatDuration = (totalH: number) => {
     const abs = Math.abs(totalH);
