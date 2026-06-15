@@ -548,7 +548,7 @@ const ShiftCard = ({ weeklySchedule, breaks, movements, personnel, daysOffset = 
   const { data: matrixSettings } = useQuery({
     queryKey: ['system_settings_break_planning'],
     queryFn: async () => {
-      const { data } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_planning').maybeSingle();
+      const { data } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_matrix').maybeSingle();
       return data?.setting_value || { slots: [], departmentGroups: [], rules: [] };
     },
     enabled: daysOffset === 0
@@ -1125,7 +1125,7 @@ const DashboardMatrixWrapper = () => {
   const { data: dbSettings } = useQuery({
     queryKey: ['system_settings_break_planning'],
     queryFn: async () => {
-      const { data } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_planning').maybeSingle();
+      const { data } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_matrix').maybeSingle();
       return data?.setting_value || {
         slots: [],
         departmentGroups: [],

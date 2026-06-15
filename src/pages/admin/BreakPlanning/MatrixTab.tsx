@@ -52,7 +52,14 @@ export const MatrixTab = ({ settings }: { settings: any }) => {
       </Card>
 
       {!matrix || !matrix.slots.length ? (
-        <Alert><AlertCircle className="h-4 w-4" /><AlertTitle>Bilgi</AlertTitle><AlertDescription>Seçilen tarih için planlama oluşturulamadı. Lütfen ayarlar kısmından mola slotlarını ve reyonları tanımladığınızdan emin olun.</AlertDescription></Alert>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Bilgi</AlertTitle>
+          <AlertDescription>
+            Seçilen tarih için planlama oluşturulamadı. Lütfen ayarlar kısmından mola slotlarını ve reyonları tanımladığınızdan emin olun. 
+            (Hata Detayı: Personel={personnelData?.length || 0}, Vardiya={shiftsData?.length || 0}, Slot={settings?.slots?.length || 0}, Grup={settings?.departmentGroups?.length || 0})
+          </AlertDescription>
+        </Alert>
       ) : (
         <Card>
           <CardHeader><CardTitle>{format(new Date(selectedDate), 'd MMMM yyyy', { locale: tr })} - Mola Matrisi</CardTitle></CardHeader>

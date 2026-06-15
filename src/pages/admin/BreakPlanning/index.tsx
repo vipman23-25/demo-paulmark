@@ -41,9 +41,11 @@ export default function BreakPlanning() {
     mutationFn: async (newSettings: any) => {
       const { data: existing } = await supabase.from('system_settings' as any).select('id').eq('setting_key', 'break_matrix').maybeSingle();
       if (existing) {
-        await supabase.from('system_settings' as any).update({ setting_value: newSettings }).eq('id', existing.id);
+        const { error } = await supabase.from('system_settings' as any).update({ setting_value: newSettings }).eq('id', existing.id);
+        if (error) throw error;
       } else {
-        await supabase.from('system_settings' as any).insert({ setting_key: 'break_matrix', setting_value: newSettings });
+        const { error } = await supabase.from('system_settings' as any).insert({ setting_key: 'break_matrix', setting_value: newSettings });
+        if (error) throw error;
       }
     },
     onSuccess: () => {

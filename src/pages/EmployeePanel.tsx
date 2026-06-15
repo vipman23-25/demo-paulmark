@@ -465,7 +465,7 @@ const EmployeePanel = () => {
     queryKey: ['employee_break_matrix', personnel?.id, targetDateStr],
     enabled: !!personnel?.id,
     queryFn: async () => {
-      const { data: sData } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_planning').maybeSingle();
+      const { data: sData } = await supabase.from('system_settings' as any).select('setting_value').eq('setting_key', 'break_matrix').maybeSingle();
       const settings = sData?.setting_value || { slots: [], departmentGroups: [], rules: [] };
       
       const { data: shiftsData } = await supabase.from('shift_schedules').select('*').eq('week_start_date', weekStartStr);
