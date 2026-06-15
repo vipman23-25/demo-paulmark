@@ -19,6 +19,7 @@ const DAYS = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cuma
 const DayOffView = () => {
   const queryClient = useQueryClient();
   const [selectedWeeklyIds, setSelectedWeeklyIds] = useState<string[]>([]);
+  const [selectedPrefIds, setSelectedPrefIds] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState({ personnel_id: '', day_of_week: '', description: '', requested_shift: 'farketmez', admin_response: '', status: 'approved' });
   const [isPrefOpen, setIsPrefOpen] = useState(false);
@@ -135,6 +136,21 @@ const DayOffView = () => {
     onError: (error: any) => toast.error('Toplu silme başarısız: ' + error.message)
   });
 
+  const bulkDeletePrefMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('shift_preferences' as any).delete().in('id', ids);
+      if (error) throw error;
+      return ids;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['shift_preferences'] });
+      queryClient.invalidateQueries({ queryKey: ['shift_engine_context'] });
+      toast.success(`${data.length} vardiya tercihi silindi`);
+      setSelectedPrefIds([]);
+    },
+    onError: (error: any) => toast.error('Toplu silme başarısız: ' + error.message)
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, admin_response }: { id: string, status: string, admin_response?: string }) => {
       const payload: any = { status, admin_response };
@@ -216,6 +232,31 @@ const DayOffView = () => {
     if (selectedWeeklyIds.length === 0) return;
     if (confirm(`${selectedWeeklyIds.length} adet kaydı silmek istediğinize emin misiniz?`)) {
       bulkDeleteMutation.mutate(selectedWeeklyIds);
+    }
+  };
+
+  const handleBulkDeletePref = () => {
+    if (selectedPrefIds.length === 0) return;
+    if (confirm(`${selectedPrefIds.length} adet tercihi silmek istediğinize emin misiniz?`)) {
+      bulkDeletePrefMutation.mutate(selectedPrefIds);
+    }
+  };
+
+  const toggleWeeklySelectAll = () => {
+    const activeDayOffs = data.filter(p => p.weeklyDayOffs.length > 0).map(p => p.weeklyDayOffs[0].id);
+    if (selectedWeeklyIds.length === activeDayOffs.length && activeDayOffs.length > 0) {
+      setSelectedWeeklyIds([]);
+    } else {
+      setSelectedWeeklyIds(activeDayOffs);
+    }
+  };
+
+  const togglePrefSelectAll = () => {
+    const activePrefs = data.filter(p => p.shiftPreference).map(p => (p.shiftPreference as any).id);
+    if (selectedPrefIds.length === activePrefs.length && activePrefs.length > 0) {
+      setSelectedPrefIds([]);
+    } else {
+      setSelectedPrefIds(activePrefs);
     }
   };
 
@@ -326,16 +367,59 @@ const DayOffView = () => {
           <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle>Haftalık İzin Günleri</CardTitle>
-              {selectedWeeklyIds.length > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleBulkDeleteWeekly} disabled={bulkDeleteMutation.isPending}>
-                  <Trash2 className="w-4 h-4 mr-2" /> Toplu Sil ({selectedWeeklyIds.length})
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {selectedWeeklyIds.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={handleBulkDeleteWeekly} disabled={bulkDeleteMutation.isPending}>
+                    <Trash2 className="w-4 h-4 mr-2" /> Toplu Sil ({selectedWeeklyIds.length})
+                  </Button>
+                )}
+                <Dialog open={isOpen} onOpenChange={(o) => { setIsOpen(o); if(!o) setForm({personnel_id: '', day_of_week: '', description: '', requested_shift: 'farketmez', admin_response: '', status: 'approved'}); }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><Plus className="w-4 h-4 mr-2"/> İzin Ata</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>İzin Günü Düzenle</DialogTitle></DialogHeader>
+                    <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+                      <div>
+                        <Label>Personel</Label>
+                        <Select value={form.personnel_id} onValueChange={(v) => setForm({...form, personnel_id: v})}>
+                          <SelectTrigger><SelectValue placeholder="Personel Seçin" /></SelectTrigger>
+                          <SelectContent>
+                            {personnel.map((p: any) => (
+                              <SelectItem key={`day-p-${p.id}`} value={p.id}>{p.first_name} {p.last_name} ({p.department})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>İzin Günü</Label>
+                        <Select value={form.day_of_week} onValueChange={(v) => setForm({...form, day_of_week: v})}>
+                          <SelectTrigger><SelectValue placeholder="Gün Seçin" /></SelectTrigger>
+                          <SelectContent>
+                            {DAYS.slice(1, 8).map((d, i) => (
+                              <SelectItem key={`day-d-${i+1}`} value={(i+1).toString()}>{d}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button type="submit" className="w-full" disabled={upsertMutation.isPending}>
+                        {upsertMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={data.filter(p => p.weeklyDayOffs.length > 0).length > 0 && selectedWeeklyIds.length === data.filter(p => p.weeklyDayOffs.length > 0).length}
+                        onCheckedChange={toggleWeeklySelectAll}
+                      />
+                    </TableHead>
                     <TableHead>Personel</TableHead>
                     <TableHead>Departman</TableHead>
                     <TableHead>İzin Günü</TableHead>
@@ -346,6 +430,17 @@ const DayOffView = () => {
                 <TableBody>
                   {data.map(p => (
                     <TableRow key={p.id}>
+                      <TableCell>
+                        {p.weeklyDayOffs.length > 0 && (
+                          <Checkbox
+                            checked={selectedWeeklyIds.includes(p.weeklyDayOffs[0].id)}
+                            onCheckedChange={(c) => {
+                              if (c) setSelectedWeeklyIds([...selectedWeeklyIds, p.weeklyDayOffs[0].id]);
+                              else setSelectedWeeklyIds(selectedWeeklyIds.filter(id => id !== p.weeklyDayOffs[0].id));
+                            }}
+                          />
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{p.first_name} {p.last_name}</TableCell>
                       <TableCell>{p.department}</TableCell>
                       <TableCell>
@@ -432,12 +527,23 @@ const DayOffView = () => {
               </form>
             </DialogContent>
           </Dialog>
+          {selectedPrefIds.length > 0 && (
+            <Button variant="destructive" size="sm" onClick={handleBulkDeletePref} disabled={bulkDeletePrefMutation.isPending} className="ml-2">
+              <Trash2 className="w-4 h-4 mr-2" /> Toplu Sil ({selectedPrefIds.length})
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={data.filter(p => p.shiftPreference).length > 0 && selectedPrefIds.length === data.filter(p => p.shiftPreference).length}
+                      onCheckedChange={togglePrefSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Personel</TableHead>
                   <TableHead>Departman</TableHead>
                   <TableHead>Tercih Edilen Gün</TableHead>
@@ -449,13 +555,22 @@ const DayOffView = () => {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground animate-pulse">Veriler y├╝kleniyor...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground animate-pulse">Veriler yükleniyor...</TableCell></TableRow>
                 ) : data.filter(p => p.shiftPreference).length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Vardiya tercihi yapan personel bulunamadı.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Vardiya tercihi yapan personel bulunamadı.</TableCell></TableRow>
                 ) : data.filter(p => p.shiftPreference).map(p => {
                   const sp = p.shiftPreference as any;
                   return (
                   <TableRow key={`sp-${p.id}`}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedPrefIds.includes(sp.id)}
+                        onCheckedChange={(c) => {
+                          if (c) setSelectedPrefIds([...selectedPrefIds, sp.id]);
+                          else setSelectedPrefIds(selectedPrefIds.filter(id => id !== sp.id));
+                        }}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{p.first_name} {p.last_name}</TableCell>
                     <TableCell>{p.department}</TableCell>
                     <TableCell>
