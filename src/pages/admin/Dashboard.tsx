@@ -293,6 +293,7 @@ const Dashboard = ({ isManagerPanel = false }: { isManagerPanel?: boolean }) => 
       const todayIso = new Date();
       todayIso.setHours(0,0,0,0);
       const todayIsoStr = todayIso.toISOString();
+      const todayStr = format(todayIso, 'yyyy-MM-dd');
       const ninetyDaysAgoStr = format(new Date(Date.now() - 90*24*60*60*1000), 'yyyy-MM-dd');
       const thirtyDaysAgoStr = format(new Date(Date.now() - 30*24*60*60*1000), 'yyyy-MM-dd');
 

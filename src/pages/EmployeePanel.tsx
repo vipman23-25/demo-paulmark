@@ -406,7 +406,7 @@ const EmployeePanel = () => {
       const todayDateOfMonth = today.getDate();
 
       const activeBreak = (breaks || []).find((b: any) => !b.break_end);
-      const myTodayShift = (shiftSchedules || []).find((s: any) => s.personnel_id === personnel.id && s.shift_date === todayIsoDate);
+      const myTodayShift = (shiftSchedules || []).find((s: any) => s.personnel_id === personnel.id && s.shift_date === todayDateStr);
       const currentTimeStr = format(new Date(), 'HH:mm');
 
       const visibleReminders = (reminders || []).filter((rem: any) => {
@@ -429,7 +429,7 @@ const EmployeePanel = () => {
 
         if (rem.display_type === 'hidden' && !rem.is_survey) return false;
   
-        if (rem.target_date && todayIsoDate !== rem.target_date && rem.recurrence === 'none' && !rem.is_survey) {
+        if (rem.target_date && todayDateStr !== rem.target_date && rem.recurrence === 'none' && !rem.is_survey) {
            return false;
         }
 
