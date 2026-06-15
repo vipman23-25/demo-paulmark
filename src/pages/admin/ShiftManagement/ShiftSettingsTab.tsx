@@ -913,32 +913,7 @@ const ShiftSettingsTab = () => {
 
       <DemandRulesCard engineConfig={engineConfig} updateEngineConfig={updateEngineConfig} loadingConfig={loadingConfig} personnelDepts={personnelDepts} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Reyon Vardiya Oranları (Sabah/Akşam)</CardTitle>
-          <CardDescription>Motorun otomatik oluşturacağı Sabah/Akşam kişi sayısını manuel kısıtlayabilirsiniz. (Boş bırakılırsa sistem mevcut kişi sayısına göre orantılar)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Reyon</TableHead>
-                <TableHead>Sabahçı Sy.</TableHead>
-                <TableHead>Akşamcı Sy.</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {personnelDepts?.map((dept: any) => {
-                const rule = deptRules?.find((r: any) => r.department_name === dept) || {};
-                return (
-                  <RuleRow key={dept} dept={dept} rule={rule} onSave={(m, e) => upsertDeptRule.mutate({ dept, mCount: m, eCount: e })} />
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+
 
       <Card className="md:col-span-2">
         <CardHeader>
