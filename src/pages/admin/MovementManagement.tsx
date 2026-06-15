@@ -215,6 +215,11 @@ const MovementManagement = () => {
         
       if (shiftError) throw shiftError;
 
+      const { data: allPersonnel, error: pErr } = await supabase
+        .from('personnel')
+        .select('*');
+      if (pErr) throw pErr;
+
       const XLSX = await import('xlsx');
 
       const currentMonthHolidays = HOLIDAYS_2026.filter(h => h.date.startsWith(exportMonth));
@@ -227,7 +232,7 @@ const MovementManagement = () => {
           return dept;
       };
 
-      const sortedPersonnel = [...personnel].sort((a: any, b: any) => {
+      const sortedPersonnel = [...(allPersonnel || [])].sort((a: any, b: any) => {
           let ia = targetOrder.indexOf(getGroupedDept(a.department));
           let ib = targetOrder.indexOf(getGroupedDept(b.department));
           if (ia === -1) ia = 999;
@@ -405,8 +410,15 @@ const MovementManagement = () => {
 
         row['TOPLAM ÇALIŞMA GÜN SAYISI'] = totalWorkedDays;
         row['RAPOR VE İZİN DURUMLARI'] = descriptions.join(', ') || '-';
+        row._baseDays = baseDays; // keep temporarily for filtering
 
         return row;
+      }).filter((r: any) => r._baseDays > 0);
+
+      // Re-assign Sıra No after filtering
+      data.forEach((r: any, i: number) => {
+        r['Sıra No'] = i + 1;
+        delete r._baseDays;
       });
 
       const ws = XLSX.utils.json_to_sheet(data);
