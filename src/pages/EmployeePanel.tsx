@@ -172,6 +172,9 @@ const EmployeePanel = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel_movements' }, () => {
         queryClient.invalidateQueries({ queryKey: ['employee_dashboard'] });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel', filter: `id=eq.${personnel.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['employee_personnel'] });
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
